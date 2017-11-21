@@ -1,15 +1,17 @@
 import numpy as np
 from PIL import Image as im
 
+MULTIPLE_STD_PARAM = 2.0
+FILE_SUFIX = "std2.0"
 
 def readBitmapFromFile(fileName):
-    path = "Photos/" + fileName
+    path = "Photos/" + fileName + ".jpg"
     return np.asarray(im.open(path))
 
 
 def writeBitmapToFile(bitmap, fileName):
     image = im.fromarray(np.uint8(bitmap))
-    path = "Done/" + fileName
+    path = "Done/" + fileName + FILE_SUFIX + ".jpg"
     image.save(path)
 
 
@@ -24,15 +26,34 @@ def calculateAveragesRGBColor(bitmap):
     return [rSum / pixelsCount, gSum / pixelsCount, bSum / pixelsCount]
 
 
+def thresholding(bitmap, avegaresRGB, std=0):
+    threshBitmap = []
+    std *= MULTIPLE_STD_PARAM
+    rThresh = avegaresRGB[0] - std if avegaresRGB[0] - std > 0 else 0
+    gThresh = avegaresRGB[1] - std if avegaresRGB[1] - std > 0 else 0
+    bThresh = avegaresRGB[2] - std if avegaresRGB[2] - std > 0 else 0
+    print(avegaresRGB)
+    print(rThresh," ", gThresh," ", bThresh)
+    print(std)
+    for row in bitmap:
+        threshRow = []
+        for cell in row:
+            r = 255 if rThresh > cell[0] else 0
+            g = 255 if gThresh > cell[1] else 0
+            b = 255 if bThresh > cell[2] else 0
+            threshRow.append([r, g, b])
+        threshBitmap.append(threshRow)
+    return threshBitmap
+
+
 def makeImage(fileName):
     bitmap = readBitmapFromFile(fileName)
-    print(calculateAveragesRGBColor(bitmap))
-    print(np.std(bitmap))
+    bitmap = thresholding(bitmap, calculateAveragesRGBColor(bitmap), np.std(bitmap))
     writeBitmapToFile(bitmap, fileName)
 
 
 def main():
-    fileName = "JGC0.jpg"
+    fileName = "JGC0"
     makeImage(fileName)
 
 
