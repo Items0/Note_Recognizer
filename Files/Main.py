@@ -3,7 +3,8 @@ from PIL import Image as im
 
 
 def readBitmapFromFile(fileName):
-    return np.asarray(im.open(fileName))
+    path = "Photos/" + fileName
+    return np.asarray(im.open(path))
 
 
 def writeBitmapToFile(bitmap, fileName):
@@ -23,13 +24,16 @@ def calculateAveragesRGBColor(bitmap):
     return [rSum / pixelsCount, gSum / pixelsCount, bSum / pixelsCount]
 
 
-def main():
-    fileName = "JGC0.jpg"
-    print("Photos/" + fileName)
-    bitmap = readBitmapFromFile("Photos/" + fileName)
+def makeImage(fileName):
+    bitmap = readBitmapFromFile(fileName)
     print(calculateAveragesRGBColor(bitmap))
     print(np.std(bitmap))
     writeBitmapToFile(bitmap, fileName)
+
+
+def main():
+    fileName = "JGC0.jpg"
+    makeImage(fileName)
 
 
 if __name__ == '__main__':
