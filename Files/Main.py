@@ -6,7 +6,9 @@ FILE_SUFIX = "std2.0"
 
 def readBitmapFromFile(fileName):
     path = "Photos/" + fileName + ".jpg"
-    return np.asarray(im.open(path))
+    image = im.open(path)
+    image = image.resize((int(image.size[0]/np.sqrt(6)), int(image.size[1]/np.sqrt(6))))
+    return np.asarray(image)
 
 
 def writeBitmapToFile(bitmap, fileName):
