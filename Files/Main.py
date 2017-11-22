@@ -1,5 +1,7 @@
 import numpy as np
 from PIL import Image as im
+import PIL.ImageStat as imageStat # fajna clasa analizująca  imageStat.Stat(Image)._get[co chcę (mean, stddev ...)]
+import matplotlib.pyplot as plt
 
 MULTIPLE_STD_PARAM = 2.0
 FILE_SUFIX = "std2.0"
@@ -7,7 +9,12 @@ FILE_SUFIX = "std2.0"
 def readBitmapFromFile(fileName):
     path = "Photos/" + fileName + ".jpg"
     image = im.open(path)
+    print(type(image))
     image = image.resize((int(image.size[0]/np.sqrt(6)), int(image.size[1]/np.sqrt(6))))
+    print(imageStat.Stat(image)._getvar())
+    plt.plot(image.histogram())
+    plt.show()
+    print(image.histogram())
     return np.asarray(image)
 
 
