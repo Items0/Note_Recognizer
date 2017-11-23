@@ -115,8 +115,24 @@ def makeBlobs(bitmap):
 
 
 def detectVerticalEdge(bitmap):
-    bitmap = createBitmapWithMask(bitmap, MASK_EDGE_VERTICAL)
-    im.fromarray(np.uint8(bitmap)).show()
+    return createBitmapWithMask(bitmap, MASK_EDGE_VERTICAL)
+
+
+
+def detectLineVertical(verticals, bitmap):
+    detectedBitmap = []
+    print(len(verticals))
+    print(len(verticals[0]))
+    for y in range(len(verticals)):
+        detectedRow = []
+        for x in range(len(verticals[0])):
+            avgColor = (bitmap[y, x, 0] + bitmap[y, x, 1] + bitmap[y, x, 2]) / 3
+            if avgColor > 100:
+                detectedRow.append([255, 255, 255])
+            else:
+                detectedRow.append([0, 0, 0])
+        detectedBitmap.append(detectedRow)
+    writeBitmapToFile(detectedBitmap, "test")
 
 
 def makeImage(fileName):
@@ -124,9 +140,9 @@ def makeImage(fileName):
     bitmap = edgeDetect(bitmap)
     bitmap = thresholding(bitmap, calculateAveragesRGBColor(bitmap))
     bitmap = makeGrayScale(bitmap)
-   # bitmap = thresholding(bitmap, [128,128,128])
-    #makeBlobs(bitmap)
-    detectVerticalEdge(bitmap)
+    # bitmap = thresholding(bitmap, [128,128,128])
+    # makeBlobs(bitmap)
+    detectLineVertical(detectVerticalEdge(bitmap), makeGrayScale(bitmap))
     writeBitmapToFile(bitmap, fileName)
 
 
