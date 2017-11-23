@@ -5,22 +5,22 @@ import matplotlib.pyplot as plt
 from skimage.filters.edges import convolve
 
 MULTIPLE_STD_PARAM = 2.0
-FILE_SUFIX = "edgeLap2Mean15thresh"
+FILE_SUFIX = ""
 MASK_EDGE_HORIZONTAL = np.array([[1, 2, 1],
                                  [0, 0, 0],
-                                 [-1, -2, -1]]) / 8
+                                 [-1, -2, -1]])
 MASK_EDGE_VERTICAL = np.array([[1, 0, -1],
                                [2, 0, -2],
-                               [1, 0, -1]]) / 8
+                               [1, 0, -1]])
 MASK_EDGE_LAPLACE = np.array([[-1, -1, -1],
                               [-1, 8, -1],
-                              [-1, -1, -1]]) / 16
+                              [-1, -1, -1]]) / 20
 MASK_MEAN = np.array([[1, 1, 1],
                       [1, 2, 1],
-                      [1, 1, 1]]) / 15
+                      [1, 1, 1]]) / 20
 MASK_DILATATION = np.array([[0, 1, 0],
-                           [1, 1, 1],
-                           [0, 1, 0]]) / 5
+                            [1, 1, 1],
+                            [0, 1, 0]])
 
 
 def readBitmapFromFile(fileName):
@@ -90,24 +90,36 @@ def doNegative(bitmap):
     return negativeBitmap
 
 
+def makeGrayScale(bitmap):
+    grayBitmap = []
+    for row in bitmap:
+        grayRow = []
+        for cell in row:
+            color = int(0.299 * cell[0] + 0.587 * cell[1] + 0.114 * cell[2])
+            grayRow.append([color, color, color])
+        grayBitmap.append(grayRow)
+    return grayBitmap
+
+
 def makeBlobs(bitmap):
     bitmap = doNegative(bitmap)
-    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
     im.fromarray(np.uint8(bitmap)).show()
-
 
 
 def makeImage(fileName):
     bitmap = readBitmapFromFile(fileName)
     bitmap = edgeDetect(bitmap)
     bitmap = thresholding(bitmap, calculateAveragesRGBColor(bitmap))
+    bitmap = makeGrayScale(bitmap)
+   # bitmap = thresholding(bitmap, [128,128,128])
     makeBlobs(bitmap)
     writeBitmapToFile(bitmap, fileName)
 
