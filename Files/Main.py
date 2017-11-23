@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from skimage.filters.edges import convolve
 
 MULTIPLE_STD_PARAM = 2.0
-FILE_SUFIX = "edgeLap2withMean9"
+FILE_SUFIX = "edgeLap2Mean15thresh"
 MASK_EDGE_HORIZONTAL = np.array([[1, 2, 1],
                                  [0, 0, 0],
                                  [-1, -2, -1]]) / 8
@@ -15,9 +15,13 @@ MASK_EDGE_VERTICAL = np.array([[1, 0, -1],
 MASK_EDGE_LAPLACE = np.array([[-1, -1, -1],
                               [-1, 8, -1],
                               [-1, -1, -1]]) / 16
-MASK_MEAN = np.array([[1,1,1],
-                      [1,1,1],
-                      [1,1,1]])/9
+MASK_MEAN = np.array([[1, 1, 1],
+                      [1, 2, 1],
+                      [1, 1, 1]]) / 15
+MASK_DILATATION = np.array([[0, 1, 0],
+                           [1, 4, 1],
+                           [0, 1, 0]]) / 8
+
 
 def readBitmapFromFile(fileName):
     path = "Photos/" + fileName + ".jpg"
@@ -55,9 +59,9 @@ def thresholding(bitmap, avegaresRGB, std=0):
     for row in bitmap:
         threshRow = []
         for cell in row:
-            r = 255 if rThresh > cell[0] else 0
-            g = 255 if gThresh > cell[1] else 0
-            b = 255 if bThresh > cell[2] else 0
+            r = 255 if rThresh < cell[0] else 0
+            g = 255 if gThresh < cell[1] else 0
+            b = 255 if bThresh < cell[2] else 0
             threshRow.append([r, g, b])
         threshBitmap.append(threshRow)
     return threshBitmap
@@ -68,18 +72,15 @@ def createBitmapWithMask(bitmap, mask):
 
 
 def edgeDetect(bitmap):
-    bitmap = createBitmapWithMask(bitmap,MASK_MEAN)
-    bitmap = createBitmapWithMask(bitmap,MASK_EDGE_LAPLACE)
-    #bitmapHor = createBitmapWithMask(bitmap, MASK_EDGE_VERTICAL)
-    #bitmapVer = createBitmapWithMask(bitmap, MASK_EDGE_VERTICAL)
-    #bitmap = (bitmapHor + bitmapVer) / 2
+    bitmap = createBitmapWithMask(bitmap, MASK_MEAN)
+    bitmap = createBitmapWithMask(bitmap, MASK_EDGE_LAPLACE)
     return bitmap
 
 
 def makeImage(fileName):
     bitmap = readBitmapFromFile(fileName)
     bitmap = edgeDetect(bitmap)
-    # bitmap = thresholding(bitmap, calculateAveragesRGBColor(bitmap), np.std(bitmap))
+    bitmap = thresholding(bitmap, calculateAveragesRGBColor(bitmap))
     writeBitmapToFile(bitmap, fileName)
 
 
