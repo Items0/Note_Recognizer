@@ -11,7 +11,7 @@ MASK_EDGE_HORIZONTAL = np.array([[1, 2, 1],
                                  [-1, -2, -1]])
 MASK_EDGE_VERTICAL = np.array([[1, 0, -1],
                                [2, 0, -2],
-                               [1, 0, -1]])
+                               [1, 0, -1]]) / 8
 MASK_EDGE_LAPLACE = np.array([[-1, -1, -1],
                               [-1, 8, -1],
                               [-1, -1, -1]]) / 20
@@ -114,13 +114,19 @@ def makeBlobs(bitmap):
     im.fromarray(np.uint8(bitmap)).show()
 
 
+def detectVerticalEdge(bitmap):
+    bitmap = createBitmapWithMask(bitmap, MASK_EDGE_VERTICAL)
+    im.fromarray(np.uint8(bitmap)).show()
+
+
 def makeImage(fileName):
     bitmap = readBitmapFromFile(fileName)
     bitmap = edgeDetect(bitmap)
     bitmap = thresholding(bitmap, calculateAveragesRGBColor(bitmap))
     bitmap = makeGrayScale(bitmap)
    # bitmap = thresholding(bitmap, [128,128,128])
-    makeBlobs(bitmap)
+    #makeBlobs(bitmap)
+    detectVerticalEdge(bitmap)
     writeBitmapToFile(bitmap, fileName)
 
 
