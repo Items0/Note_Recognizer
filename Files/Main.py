@@ -19,8 +19,8 @@ MASK_MEAN = np.array([[1, 1, 1],
                       [1, 2, 1],
                       [1, 1, 1]]) / 15
 MASK_DILATATION = np.array([[0, 1, 0],
-                           [1, 4, 1],
-                           [0, 1, 0]]) / 8
+                           [1, 1, 1],
+                           [0, 1, 0]]) / 5
 
 
 def readBitmapFromFile(fileName):
@@ -77,10 +77,38 @@ def edgeDetect(bitmap):
     return bitmap
 
 
+def doNegative(bitmap):
+    negativeBitmap = []
+    for row in bitmap:
+        reverseRow = []
+        for column in row:
+            r = 255 - column[0]
+            g = 255 - column[1]
+            b = 255 - column[2]
+            reverseRow.append([r, g, b])
+        negativeBitmap.append(reverseRow)
+    return negativeBitmap
+
+
+def makeBlobs(bitmap):
+    bitmap = doNegative(bitmap)
+    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
+    bitmap = createBitmapWithMask(bitmap,MASK_DILATATION)
+    im.fromarray(np.uint8(bitmap)).show()
+
+
+
 def makeImage(fileName):
     bitmap = readBitmapFromFile(fileName)
     bitmap = edgeDetect(bitmap)
     bitmap = thresholding(bitmap, calculateAveragesRGBColor(bitmap))
+    makeBlobs(bitmap)
     writeBitmapToFile(bitmap, fileName)
 
 
