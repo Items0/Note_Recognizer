@@ -26,7 +26,7 @@ MASK_DILATATION = np.array([[0, 1, 0],
                             [1, 1, 1],
                             [0, 1, 0]])
 
-IDENT_PARAM = 0.45 # <-1,1>
+IDENT_PARAM = 0.52 # <-1,1>
 
 def readBitmapFromFile(fileName):
     path = "Photos/" + fileName + ".jpg"
@@ -151,7 +151,7 @@ def makeImage(fileName):
 
 def findElement(myImage, myElement, myCopy, ax, myColor):
     result = match_template(myImage, myElement)
-    tab = peak_local_max(result, 10, threshold_rel=IDENT_PARAM)
+    tab = peak_local_max(result, 20, threshold_rel=IDENT_PARAM)
     for el in tab:
         y = el[0]
         x = el[1]
@@ -159,7 +159,6 @@ def findElement(myImage, myElement, myCopy, ax, myColor):
         myImage[y:y+height, x:x+width] = 0
         #print (y)
         #print (x)
-        rr, cc = circle_perimeter(math.ceil(y+height/2),math.ceil(x+width/2), min(height, width))
         rect = plt.Rectangle((x,y), width, height, edgecolor=myColor, fill=False)
         ax.add_patch(rect)
     return myImage, myCopy
@@ -178,8 +177,8 @@ def loadElements(myNames):
     return elements
 
 def main():
-    myNames = ['trebleClef', 'bassClef', 'eighthNote', 'quarterNote', 'wholeNote']
-    frameColor = ['b', 'r', 'm', 'c', 'g']
+    myNames = ['chord3', 'chord2','trebleClef', 'bassClef', 'eighthNote', 'quarterNote', 'wholeNote']
+    frameColor = ['yellow','coral','b', 'r', 'm', 'c', 'g']
 
     fileName = "GGC0"
     makeImage(fileName)
