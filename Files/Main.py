@@ -1,5 +1,11 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import skimage
+import math
 from PIL import Image as im
+from skimage.feature import match_template
+from skimage import io, data, draw
+from skimage.draw import circle_perimeter
 import PIL.ImageStat as imageStat  # fajna clasa analizująca  imageStat.Stat(Image)._get[co chcę (mean, stddev ...)]
 import matplotlib.pyplot as plt
 from skimage.filters.edges import convolve
@@ -65,6 +71,18 @@ def thresholding(bitmap, avegaresRGB, std=0):
             threshRow.append([r, g, b])
         threshBitmap.append(threshRow)
     return threshBitmap
+
+def findElement(myImage, myElement, myCopy):
+    result = match_template(myImage, myElement)
+    y, x = np.unravel_index(np.argmax(result), result.shape)
+    height, width = myElement.shape
+    myImage[y:y+height, x:x+width] = 0
+    print (y)
+    print (x)
+    rr, cc = circle_perimeter(math.ceil(y+height/2),math.ceil(x+width/2), min(height, width))
+    myCopy[rr, cc] = 1
+    return myImage, myCopy
+
 
 
 def createBitmapWithMask(bitmap, mask):
@@ -147,9 +165,22 @@ def makeImage(fileName):
 
 
 def main():
-    fileName = "JGC0"
-    makeImage(fileName)
+    '''fileName = ["GGC0", "GGC3", "GGO3", "GPN3", "GPN6", "GPO0", "JBO0", "JBO3", "JGC0", "JGC3", "JPC6",
+    "JPN3", "JPO3", "NBO0", "NBO6", "NGC3", "NPN0", "PBO0", "PGC0", "PGO3", "PPC3", "PPO3"]
 
+    for i in fileName:
+        makeImage(i)'''
+
+    #fileName = "JGC0"
+    #makeImage(fileName)
+    fig = plt.figure(figsize=(15, 10))
+    myImage = io.imread("Photos/JPN3.jpg", as_grey=True)
+    myCopy = io.imread("Photos/JPN3.jpg", as_grey=True)
+    myElement = io.imread("Patterns/myNute.jpg", as_grey=True)
+    for i in range(0,4):
+        myImage, myCopy = findElement(myImage, myElement, myCopy)
+    io.imshow(myCopy)
+    plt.show()
 
 if __name__ == '__main__':
     main()
