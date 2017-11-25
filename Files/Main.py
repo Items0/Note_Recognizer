@@ -72,17 +72,17 @@ def thresholding(bitmap, avegaresRGB, std=0):
         threshBitmap.append(threshRow)
     return threshBitmap
 
+
 def findElement(myImage, myElement, myCopy):
     result = match_template(myImage, myElement)
     y, x = np.unravel_index(np.argmax(result), result.shape)
     height, width = myElement.shape
-    myImage[y:y+height, x:x+width] = 0
-    print (y)
-    print (x)
-    rr, cc = circle_perimeter(math.ceil(y+height/2),math.ceil(x+width/2), min(height, width))
+    myImage[y:y + height, x:x + width] = 0
+    print(y)
+    print(x)
+    rr, cc = circle_perimeter(math.ceil(y + height / 2), math.ceil(x + width / 2), min(height, width))
     myCopy[rr, cc] = 1
     return myImage, myCopy
-
 
 
 def createBitmapWithMask(bitmap, mask):
@@ -92,6 +92,16 @@ def createBitmapWithMask(bitmap, mask):
 def edgeDetect(bitmap):
     bitmap = createBitmapWithMask(bitmap, MASK_MEAN)
     bitmap = createBitmapWithMask(bitmap, MASK_EDGE_LAPLACE)
+    return bitmap
+
+
+def createBitmapWithMask2D(bitmap, mask):
+    return np.abs(convolve(bitmap, mask[:, :]))
+
+
+def edgeDetect2D(bitmap):
+    bitmap = createBitmapWithMask2D(bitmap, MASK_MEAN)
+    bitmap = createBitmapWithMask2D(bitmap, MASK_EDGE_LAPLACE)
     return bitmap
 
 
@@ -136,7 +146,6 @@ def detectVerticalEdge(bitmap):
     return createBitmapWithMask(bitmap, MASK_EDGE_VERTICAL)
 
 
-
 def detectLineVertical(verticals, bitmap):
     detectedBitmap = []
     print(len(verticals))
@@ -171,16 +180,33 @@ def main():
     for i in fileName:
         makeImage(i)'''
 
-    #fileName = "JGC0"
-    #makeImage(fileName)
+    # fileName = "JGC0"
+    # makeImage(fileName)
     fig = plt.figure(figsize=(15, 10))
-    myImage = io.imread("Photos/JPN3.jpg", as_grey=True)
-    myCopy = io.imread("Photos/JPN3.jpg", as_grey=True)
-    myElement = io.imread("Patterns/myNute.jpg", as_grey=True)
-    for i in range(0,4):
+    myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
+    myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
+
+    myImage = skimage.filters.median(myImage)
+    myImage = skimage.filters.sobel(myImage)
+    thresh = skimage.filters.threshold_triangle(myImage)
+    myImage = myImage > thresh
+
+    myCopy = skimage.filters.median(myCopy)
+    myCopy = skimage.filters.sobel(myCopy)
+    thresh = skimage.filters.threshold_triangle(myCopy)
+    myCopy = myCopy > thresh
+    # myCopy = skimage.filters.laplace(myCopy)
+
+
+    # io.imshow(myCopy)
+    # plt.show()
+
+    myElement = io.imread("Patterns/full_note.jpg", as_grey=True)
+    for i in range(0, 4):
         myImage, myCopy = findElement(myImage, myElement, myCopy)
     io.imshow(myCopy)
     plt.show()
+
 
 if __name__ == '__main__':
     main()
