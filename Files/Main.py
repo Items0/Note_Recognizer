@@ -9,6 +9,7 @@ from skimage.draw import circle_perimeter
 import PIL.ImageStat as imageStat  # fajna clasa analizująca  imageStat.Stat(Image)._get[co chcę (mean, stddev ...)]
 import matplotlib.pyplot as plt
 from skimage.filters.edges import convolve
+import skimage.morphology as morph
 
 MULTIPLE_STD_PARAM = 2.0
 FILE_SUFIX = ""
@@ -20,10 +21,10 @@ MASK_EDGE_VERTICAL = np.array([[1, 0, -1],
                                [1, 0, -1]]) / 8
 MASK_EDGE_LAPLACE = np.array([[-1, -1, -1],
                               [-1, 8, -1],
-                              [-1, -1, -1]]) / 20
+                              [-1, -1, -1]])
 MASK_MEAN = np.array([[1, 1, 1],
                       [1, 2, 1],
-                      [1, 1, 1]]) / 20
+                      [1, 1, 1]]) /20
 MASK_DILATATION = np.array([[0, 1, 0],
                             [1, 1, 1],
                             [0, 1, 0]])
@@ -51,6 +52,14 @@ def calculateAveragesRGBColor(bitmap):
             bSum += column[2]
     pixelsCount = len(bitmap) * len(bitmap[0])
     return [rSum / pixelsCount, gSum / pixelsCount, bSum / pixelsCount]
+
+
+def calculateAveragesRGBColor2D(bitmap):
+    sum = 0
+    for row in bitmap:
+        for column in row:
+            sum += column
+    return sum / (len(bitmap) * len(bitmap[0]))
 
 
 def thresholding(bitmap, avegaresRGB, std=0):
@@ -173,6 +182,17 @@ def makeImage(fileName):
     writeBitmapToFile(bitmap, fileName)
 
 
+
+def filterImage(image):
+    image = np.abs(convolve(image, MASK_MEAN))
+    image = skimage.filters.sobel(image)
+    image = image > skimage.filters.threshold_li(image)
+    image = morph.erosion(image)
+    image = morph.dilation(image)
+    im.fromarray(np.uint8(image * 255)).show()
+    return image
+
+
 def main():
     '''fileName = ["GGC0", "GGC3", "GGO3", "GPN3", "GPN6", "GPO0", "JBO0", "JBO3", "JGC0", "JGC3", "JPC6",
     "JPN3", "JPO3", "NBO0", "NBO6", "NGC3", "NPN0", "PBO0", "PGC0", "PGO3", "PPC3", "PPO3"]
@@ -186,26 +206,23 @@ def main():
     myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
     myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
 
-    myImage = skimage.filters.median(myImage)
-    myImage = skimage.filters.sobel(myImage)
-    thresh = skimage.filters.threshold_triangle(myImage)
-    myImage = myImage > thresh
+    filterImage(myImage)
 
-    myCopy = skimage.filters.median(myCopy)
-    myCopy = skimage.filters.sobel(myCopy)
-    thresh = skimage.filters.threshold_triangle(myCopy)
-    myCopy = myCopy > thresh
+    # myImage = skimage.filters.median(myImage)
+    # myImage = skimage.filters.sobel(myImage)
+
+
     # myCopy = skimage.filters.laplace(myCopy)
 
 
-    # io.imshow(myCopy)
+    # io.imshow(myImage)
     # plt.show()
 
-    myElement = io.imread("Patterns/full_note.jpg", as_grey=True)
-    for i in range(0, 4):
-        myImage, myCopy = findElement(myImage, myElement, myCopy)
-    io.imshow(myCopy)
-    plt.show()
+    # myElement = io.imread("Patterns/full_note.jpg", as_grey=True)
+    # for i in range(0, 4):
+    #     myImage, myCopy = findElement(myImage, myElement, myCopy)
+    # io.imshow(myCopy)
+    # plt.show()
 
 
 if __name__ == '__main__':
