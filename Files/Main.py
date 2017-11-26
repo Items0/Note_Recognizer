@@ -10,6 +10,7 @@ import PIL.ImageStat as imageStat  # fajna clasa analizująca  imageStat.Stat(Im
 import matplotlib.pyplot as plt
 from skimage.filters.edges import convolve
 import skimage.morphology as morph
+from skimage.morphology import square
 
 MULTIPLE_STD_PARAM = 2.0
 FILE_SUFIX = ""
@@ -24,7 +25,7 @@ MASK_EDGE_LAPLACE = np.array([[-1, -1, -1],
                               [-1, -1, -1]])
 MASK_MEAN = np.array([[1, 1, 1],
                       [1, 2, 1],
-                      [1, 1, 1]]) /20
+                      [1, 1, 1]]) / 20
 MASK_DILATATION = np.array([[0, 1, 0],
                             [1, 1, 1],
                             [0, 1, 0]])
@@ -52,14 +53,6 @@ def calculateAveragesRGBColor(bitmap):
             bSum += column[2]
     pixelsCount = len(bitmap) * len(bitmap[0])
     return [rSum / pixelsCount, gSum / pixelsCount, bSum / pixelsCount]
-
-
-def calculateAveragesRGBColor2D(bitmap):
-    sum = 0
-    for row in bitmap:
-        for column in row:
-            sum += column
-    return sum / (len(bitmap) * len(bitmap[0]))
 
 
 def thresholding(bitmap, avegaresRGB, std=0):
@@ -114,43 +107,6 @@ def edgeDetect2D(bitmap):
     return bitmap
 
 
-def doNegative(bitmap):
-    negativeBitmap = []
-    for row in bitmap:
-        reverseRow = []
-        for column in row:
-            r = 255 - column[0]
-            g = 255 - column[1]
-            b = 255 - column[2]
-            reverseRow.append([r, g, b])
-        negativeBitmap.append(reverseRow)
-    return negativeBitmap
-
-
-def makeGrayScale(bitmap):
-    grayBitmap = []
-    for row in bitmap:
-        grayRow = []
-        for cell in row:
-            color = int(0.299 * cell[0] + 0.587 * cell[1] + 0.114 * cell[2])
-            grayRow.append([color, color, color])
-        grayBitmap.append(grayRow)
-    return grayBitmap
-
-
-def makeBlobs(bitmap):
-    bitmap = doNegative(bitmap)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    im.fromarray(np.uint8(bitmap)).show()
-
-
 def detectVerticalEdge(bitmap):
     return createBitmapWithMask(bitmap, MASK_EDGE_VERTICAL)
 
@@ -171,26 +127,63 @@ def detectLineVertical(verticals, bitmap):
     writeBitmapToFile(detectedBitmap, "test")
 
 
-def makeImage(fileName):
-    bitmap = readBitmapFromFile(fileName)
-    bitmap = edgeDetect(bitmap)
-    bitmap = thresholding(bitmap, calculateAveragesRGBColor(bitmap))
-    bitmap = makeGrayScale(bitmap)
-    # bitmap = thresholding(bitmap, [128,128,128])
-    # makeBlobs(bitmap)
-    detectLineVertical(detectVerticalEdge(bitmap), makeGrayScale(bitmap))
-    writeBitmapToFile(bitmap, fileName)
-
-
-
 def filterImage(image):
     image = np.abs(convolve(image, MASK_MEAN))
     image = skimage.filters.sobel(image)
     image = image > skimage.filters.threshold_li(image)
     image = morph.erosion(image)
     image = morph.dilation(image)
-    im.fromarray(np.uint8(image * 255)).show()
+    blob = makeBlobs(image)
+    starts, stops = detectStartsAndEndsBlobs(blob)
+    imageParts = divideImageOnParts(image, starts, stops)
+    for part in imageParts:
+        im.fromarray(np.uint8(part) * 255).show()
     return image
+
+
+def makeBlobs(image):
+    blob = morph.dilation(image, square(30))
+    return blob
+
+
+def rowContainWhite(row):
+    for i in range(len(row)):
+        if row[i] == 1:
+            return True
+    return False
+
+
+def detectStartsAndEndsBlobs(image):
+    starts = []
+    ends = []
+    isBlob = False
+    counter = 0
+    for row in image:
+        whiteInRow = rowContainWhite(row)
+        if not isBlob and whiteInRow:
+            starts.append(counter)
+            isBlob = True
+        if isBlob and not whiteInRow:
+            ends.append(counter)
+            isBlob = False
+        counter += 1
+    return starts, ends
+
+
+def divideImageOnParts(image, starts, stops):
+    parts = []
+    part = []
+    rewrite = False
+    for i in range(len(image)):
+        if not rewrite and i in starts:
+            rewrite = True
+            part = []
+        if rewrite and i in stops:
+            rewrite = False
+            parts.append(part)
+        if rewrite:
+            part.append(image[i] * 1)
+    return parts
 
 
 def main():
@@ -206,7 +199,7 @@ def main():
     myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
     myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
 
-    filterImage(myImage)
+    myImage = filterImage(myImage)
 
     # myImage = skimage.filters.median(myImage)
     # myImage = skimage.filters.sobel(myImage)
