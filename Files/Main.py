@@ -44,37 +44,6 @@ def writeBitmapToFile(bitmap, fileName):
     image.save(path)
 
 
-def calculateAveragesRGBColor(bitmap):
-    rSum, gSum, bSum = 0, 0, 0
-    for row in bitmap:
-        for column in row:
-            rSum += column[0]
-            gSum += column[1]
-            bSum += column[2]
-    pixelsCount = len(bitmap) * len(bitmap[0])
-    return [rSum / pixelsCount, gSum / pixelsCount, bSum / pixelsCount]
-
-
-def thresholding(bitmap, avegaresRGB, std=0):
-    threshBitmap = []
-    std *= MULTIPLE_STD_PARAM
-    rThresh = avegaresRGB[0] - std if avegaresRGB[0] - std > 0 else 0
-    gThresh = avegaresRGB[1] - std if avegaresRGB[1] - std > 0 else 0
-    bThresh = avegaresRGB[2] - std if avegaresRGB[2] - std > 0 else 0
-    print(avegaresRGB)
-    print(rThresh, " ", gThresh, " ", bThresh)
-    print(std)
-    for row in bitmap:
-        threshRow = []
-        for cell in row:
-            r = 255 if rThresh < cell[0] else 0
-            g = 255 if gThresh < cell[1] else 0
-            b = 255 if bThresh < cell[2] else 0
-            threshRow.append([r, g, b])
-        threshBitmap.append(threshRow)
-    return threshBitmap
-
-
 def findElement(myImage, myElement, myCopy):
     result = match_template(myImage, myElement)
     y, x = np.unravel_index(np.argmax(result), result.shape)
@@ -87,46 +56,6 @@ def findElement(myImage, myElement, myCopy):
     return myImage, myCopy
 
 
-def createBitmapWithMask(bitmap, mask):
-    return np.abs(convolve(bitmap, mask[:, :, None]))
-
-
-def edgeDetect(bitmap):
-    bitmap = createBitmapWithMask(bitmap, MASK_MEAN)
-    bitmap = createBitmapWithMask(bitmap, MASK_EDGE_LAPLACE)
-    return bitmap
-
-
-def createBitmapWithMask2D(bitmap, mask):
-    return np.abs(convolve(bitmap, mask[:, :]))
-
-
-def edgeDetect2D(bitmap):
-    bitmap = createBitmapWithMask2D(bitmap, MASK_MEAN)
-    bitmap = createBitmapWithMask2D(bitmap, MASK_EDGE_LAPLACE)
-    return bitmap
-
-
-def detectVerticalEdge(bitmap):
-    return createBitmapWithMask(bitmap, MASK_EDGE_VERTICAL)
-
-
-def detectLineVertical(verticals, bitmap):
-    detectedBitmap = []
-    print(len(verticals))
-    print(len(verticals[0]))
-    for y in range(len(verticals)):
-        detectedRow = []
-        for x in range(len(verticals[0])):
-            avgColor = (bitmap[y, x, 0] + bitmap[y, x, 1] + bitmap[y, x, 2]) / 3
-            if avgColor > 100:
-                detectedRow.append([255, 255, 255])
-            else:
-                detectedRow.append([0, 0, 0])
-        detectedBitmap.append(detectedRow)
-    writeBitmapToFile(detectedBitmap, "test")
-
-
 def filterImage(image):
     image = np.abs(convolve(image, MASK_MEAN))
     image = skimage.filters.sobel(image)
@@ -136,10 +65,9 @@ def filterImage(image):
     blob = makeBlobs(image)
     starts, stops = detectStartsAndEndsBlobs(blob)
     imageParts = divideImageOnParts(image, starts, stops)
-    for part in imageParts:
-        im.fromarray(np.uint8(part) * 255).show()
-    return image
-
+    for i in range(len(imageParts)):
+        img = im.fromarray(np.uint8(imageParts[i]) * 255)
+        img.save(str(i)+".jpg")
 
 def makeBlobs(image):
     blob = morph.dilation(image, square(30))
@@ -195,11 +123,11 @@ def main():
 
     # fileName = "JGC0"
     # makeImage(fileName)
-    fig = plt.figure(figsize=(15, 10))
+    # fig = plt.figure(figsize=(15, 10))
     myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
     myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
 
-    myImage = filterImage(myImage)
+    filterImage(myImage)
 
     # myImage = skimage.filters.median(myImage)
     # myImage = skimage.filters.sobel(myImage)
