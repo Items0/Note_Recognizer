@@ -57,19 +57,26 @@ def findElement(myImage, myElement, myCopy):
 
 
 def filterImage(image):
+    print("Obrabiam obrazek")
     image = np.abs(convolve(image, MASK_MEAN))
     image = skimage.filters.sobel(image)
     image = image > skimage.filters.threshold_li(image)
     image = morph.erosion(image)
     image = morph.dilation(image)
     blob = makeBlobs(image)
+    xPositions, yPositions = prepareDataToRegression(blob)
+    aParameter, bParameter = np.polyfit(xPositions, yPositions, 1)
+    print(aParameter)
+    print(bParameter)
     starts, stops = detectStartsAndEndsBlobs(blob)
     imageParts = divideImageOnParts(image, starts, stops)
     for i in range(len(imageParts)):
         img = im.fromarray(np.uint8(imageParts[i]) * 255)
-        img.save(str(i)+".jpg")
+        img.save(str(i) + ".jpg")
+
 
 def makeBlobs(image):
+    print("Robię blob'y")
     blob = morph.dilation(image, square(30))
     return blob
 
@@ -82,6 +89,7 @@ def rowContainWhite(row):
 
 
 def detectStartsAndEndsBlobs(image):
+    print("Szukam początków i końców blob'ów")
     starts = []
     ends = []
     isBlob = False
@@ -99,6 +107,7 @@ def detectStartsAndEndsBlobs(image):
 
 
 def divideImageOnParts(image, starts, stops):
+    print("Dzielę obrazek na części")
     parts = []
     part = []
     rewrite = False
@@ -114,6 +123,41 @@ def divideImageOnParts(image, starts, stops):
     return parts
 
 
+def prepareDataToRegression(image):
+    print("Przygotowuję dane do regresji")
+    xPositions = []
+    yPositions = []
+    for y in range(len(image)):
+        for x in range(len(image[0])):
+            if image[y, x] == 1:
+                xPositions.append(x)
+                yPositions.append(y)
+    return xPositions, yPositions
+
+
+def calculateRegressionFromMachineLearning(xPositions, yPositions):
+    print("Liczę regresję z machine learning")
+    # todo mocno zmniejszyć dane wejściowe
+    aParameter = 0.0  # inicjalizuj wagi
+    bParameter = 0.0  #
+    learning_rate = 0.0001  # stala uczenia
+    maxIteration = 10000  # liczba iteracji
+
+    dividor = 1000
+
+    for i in range(maxIteration):
+        if i % dividor == 0:
+            print("Skończyłem ", str(i / dividor), "%")
+        toB = 0.0
+        toA = 0.0
+        for j in range(len(xPositions)):
+            toB += aParameter * xPositions[j] + bParameter - yPositions[j]
+            toA += (aParameter * xPositions[j] + bParameter - yPositions[j]) * xPositions[j]
+        aParameter = aParameter - learning_rate * (1 / len(xPositions)) * toA
+        bParameter = bParameter - learning_rate * (1 / len(xPositions)) * toB
+    return aParameter, bParameter
+
+
 def main():
     '''fileName = ["GGC0", "GGC3", "GGO3", "GPN3", "GPN6", "GPO0", "JBO0", "JBO3", "JGC0", "JGC3", "JPC6",
     "JPN3", "JPO3", "NBO0", "NBO6", "NGC3", "NPN0", "PBO0", "PGC0", "PGO3", "PPC3", "PPO3"]
@@ -124,7 +168,7 @@ def main():
     # fileName = "JGC0"
     # makeImage(fileName)
     # fig = plt.figure(figsize=(15, 10))
-    myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
+    myImage = io.imread("Photos/JGC3.jpg", as_grey=True)
     myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
 
     filterImage(myImage)
