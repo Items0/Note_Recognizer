@@ -3,10 +3,13 @@ from PIL import Image as im
 import PIL.ImageStat as imageStat  # fajna clasa analizująca  imageStat.Stat(Image)._get[co chcę (mean, stddev ...)]
 import matplotlib.pyplot as plt
 from skimage.filters.edges import convolve
+import skimage.morphology as morph
+from skimage.morphology import square
 from skimage.feature import match_template, peak_local_max
 from skimage import io, data, draw, measure
 from skimage.draw import circle_perimeter, set_color
 import math
+
 
 MULTIPLE_STD_PARAM = 2.0
 FILE_SUFIX = ""
@@ -18,7 +21,7 @@ MASK_EDGE_VERTICAL = np.array([[1, 0, -1],
                                [1, 0, -1]]) / 8
 MASK_EDGE_LAPLACE = np.array([[-1, -1, -1],
                               [-1, 8, -1],
-                              [-1, -1, -1]]) / 20
+                              [-1, -1, -1]])
 MASK_MEAN = np.array([[1, 1, 1],
                       [1, 2, 1],
                       [1, 1, 1]]) / 20
@@ -41,113 +44,109 @@ def writeBitmapToFile(bitmap, fileName):
     image.save(path)
 
 
-def calculateAveragesRGBColor(bitmap):
-    rSum, gSum, bSum = 0, 0, 0
-    for row in bitmap:
-        for column in row:
-            rSum += column[0]
-            gSum += column[1]
-            bSum += column[2]
-    pixelsCount = len(bitmap) * len(bitmap[0])
-    return [rSum / pixelsCount, gSum / pixelsCount, bSum / pixelsCount]
+
+def filterImage(image):
+    print("Obrabiam obrazek")
+    image = np.abs(convolve(image, MASK_MEAN))
+    image = skimage.filters.sobel(image)
+    image = image > skimage.filters.threshold_li(image)
+    image = morph.erosion(image)
+    image = morph.dilation(image)
+    blob = makeBlobs(image)
+    xPositions, yPositions = prepareDataToRegression(blob)
+    aParameter, bParameter = np.polyfit(xPositions, yPositions, 1)
+    print(aParameter)
+    print(bParameter)
+    starts, stops = detectStartsAndEndsBlobs(blob)
+    imageParts = divideImageOnParts(image, starts, stops)
+    for i in range(len(imageParts)):
+        img = im.fromarray(np.uint8(imageParts[i]) * 255)
+        img.save(str(i) + ".jpg")
+    return image
 
 
-def thresholding(bitmap, avegaresRGB, std=0):
-    threshBitmap = []
-    std *= MULTIPLE_STD_PARAM
-    rThresh = avegaresRGB[0] - std if avegaresRGB[0] - std > 0 else 0
-    gThresh = avegaresRGB[1] - std if avegaresRGB[1] - std > 0 else 0
-    bThresh = avegaresRGB[2] - std if avegaresRGB[2] - std > 0 else 0
-    print(avegaresRGB)
-    print(rThresh, " ", gThresh, " ", bThresh)
-    print(std)
-    for row in bitmap:
-        threshRow = []
-        for cell in row:
-            r = 255 if rThresh < cell[0] else 0
-            g = 255 if gThresh < cell[1] else 0
-            b = 255 if bThresh < cell[2] else 0
-            threshRow.append([r, g, b])
-        threshBitmap.append(threshRow)
-    return threshBitmap
+def makeBlobs(image):
+    print("Robię blob'y")
+    blob = morph.dilation(image, square(30))
+    return blob
 
 
-def createBitmapWithMask(bitmap, mask):
-    return np.abs(convolve(bitmap, mask[:, :, None]))
+def rowContainWhite(row):
+    for i in range(len(row)):
+        if row[i] == 1:
+            return True
+    return False
 
 
-def edgeDetect(bitmap):
-    bitmap = createBitmapWithMask(bitmap, MASK_MEAN)
-    bitmap = createBitmapWithMask(bitmap, MASK_EDGE_LAPLACE)
-    return bitmap
+def detectStartsAndEndsBlobs(image):
+    print("Szukam początków i końców blob'ów")
+    starts = []
+    ends = []
+    isBlob = False
+    counter = 0
+    for row in image:
+        whiteInRow = rowContainWhite(row)
+        if not isBlob and whiteInRow:
+            starts.append(counter)
+            isBlob = True
+        if isBlob and not whiteInRow:
+            ends.append(counter)
+            isBlob = False
+        counter += 1
+    return starts, ends
 
 
-def doNegative(bitmap):
-    negativeBitmap = []
-    for row in bitmap:
-        reverseRow = []
-        for column in row:
-            r = 255 - column[0]
-            g = 255 - column[1]
-            b = 255 - column[2]
-            reverseRow.append([r, g, b])
-        negativeBitmap.append(reverseRow)
-    return negativeBitmap
+def divideImageOnParts(image, starts, stops):
+    print("Dzielę obrazek na części")
+    parts = []
+    part = []
+    rewrite = False
+    for i in range(len(image)):
+        if not rewrite and i in starts:
+            rewrite = True
+            part = []
+        if rewrite and i in stops:
+            rewrite = False
+            parts.append(part)
+        if rewrite:
+            part.append(image[i] * 1)
+    return parts
 
 
-def makeGrayScale(bitmap):
-    grayBitmap = []
-    for row in bitmap:
-        grayRow = []
-        for cell in row:
-            color = int(0.299 * cell[0] + 0.587 * cell[1] + 0.114 * cell[2])
-            grayRow.append([color, color, color])
-        grayBitmap.append(grayRow)
-    return grayBitmap
+def prepareDataToRegression(image):
+    print("Przygotowuję dane do regresji")
+    xPositions = []
+    yPositions = []
+    for y in range(len(image)):
+        for x in range(len(image[0])):
+            if image[y, x] == 1:
+                xPositions.append(x)
+                yPositions.append(y)
+    return xPositions, yPositions
 
 
-def makeBlobs(bitmap):
-    bitmap = doNegative(bitmap)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    bitmap = createBitmapWithMask(bitmap, MASK_DILATATION)
-    im.fromarray(np.uint8(bitmap)).show()
+def calculateRegressionFromMachineLearning(xPositions, yPositions):
+    print("Liczę regresję z machine learning")
+    # todo mocno zmniejszyć dane wejściowe
+    aParameter = 0.0  # inicjalizuj wagi
+    bParameter = 0.0  #
+    learning_rate = 0.0001  # stala uczenia
+    maxIteration = 10000  # liczba iteracji
 
+    dividor = 1000
 
-def detectVerticalEdge(bitmap):
-    return createBitmapWithMask(bitmap, MASK_EDGE_VERTICAL)
+    for i in range(maxIteration):
+        if i % dividor == 0:
+            print("Skończyłem ", str(i / dividor), "%")
+        toB = 0.0
+        toA = 0.0
+        for j in range(len(xPositions)):
+            toB += aParameter * xPositions[j] + bParameter - yPositions[j]
+            toA += (aParameter * xPositions[j] + bParameter - yPositions[j]) * xPositions[j]
+        aParameter = aParameter - learning_rate * (1 / len(xPositions)) * toA
+        bParameter = bParameter - learning_rate * (1 / len(xPositions)) * toB
+    return aParameter, bParameter
 
-
-def detectLineVertical(verticals, bitmap):
-    detectedBitmap = []
-    print(len(verticals))
-    print(len(verticals[0]))
-    for y in range(len(verticals)):
-        detectedRow = []
-        for x in range(len(verticals[0])):
-            avgColor = (bitmap[y, x, 0] + bitmap[y, x, 1] + bitmap[y, x, 2]) / 3
-            if avgColor > 100:
-                detectedRow.append([255, 255, 255])
-            else:
-                detectedRow.append([0, 0, 0])
-        detectedBitmap.append(detectedRow)
-    writeBitmapToFile(detectedBitmap, "test")
-
-
-def makeImage(fileName):
-    bitmap = readBitmapFromFile(fileName)
-    bitmap = edgeDetect(bitmap)
-    bitmap = thresholding(bitmap, calculateAveragesRGBColor(bitmap))
-    bitmap = makeGrayScale(bitmap)
-    # bitmap = thresholding(bitmap, [128,128,128])
-    # makeBlobs(bitmap)
-    #detectLineVertical(detectVerticalEdge(bitmap), makeGrayScale(bitmap))
-    writeBitmapToFile(bitmap, fileName)
 
 def findElement(myImage, myElement, myCopy, ax, myColor):
     result = match_template(myImage, myElement)
@@ -162,6 +161,16 @@ def findElement(myImage, myElement, myCopy, ax, myColor):
         rect = plt.Rectangle((x,y), width, height, edgecolor=myColor, fill=False)
         ax.add_patch(rect)
     return myImage, myCopy
+
+
+    # io.imshow(myImage)
+    # plt.show()
+
+    # myElement = io.imread("Patterns/full_note.jpg", as_grey=True)
+    # for i in range(0, 4):
+    #     myImage, myCopy = findElement(myImage, myElement, myCopy)
+    # io.imshow(myCopy)
+    # plt.show()
 
 def findSth(elements):
     for i in elements:
@@ -181,14 +190,15 @@ def main():
     frameColor = ['yellow','coral','b', 'r', 'm', 'c', 'g']
 
     fileName = "GGC0"
-    makeImage(fileName)
     fig = plt.figure(figsize=(15, 10))
     ax = fig.add_subplot(111)
     elements = loadElements(myNames)
     #line = io.imread("Patterns/line.jpg", as_grey=True)
     #findSth(elements)
-    myImage = io.imread("Done/JGC0.jpg", as_grey=True)
-    myCopy = io.imread("Done/JGC0.jpg", as_grey=True)
+    myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
+    myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
+    myImage = filterImage(myImage)
+    
     for i in range(len(elements)):
         myImage, myCopy = findElement(myImage, elements[i], myCopy, ax, frameColor[i])
     io.imshow(myCopy)
