@@ -1,16 +1,15 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import skimage
-import math
 from PIL import Image as im
-from skimage.feature import match_template
-from skimage import io, data, draw
-from skimage.draw import circle_perimeter
 import PIL.ImageStat as imageStat  # fajna clasa analizująca  imageStat.Stat(Image)._get[co chcę (mean, stddev ...)]
 import matplotlib.pyplot as plt
 from skimage.filters.edges import convolve
 import skimage.morphology as morph
 from skimage.morphology import square
+from skimage.feature import match_template, peak_local_max
+from skimage import io, data, draw, measure
+from skimage.draw import circle_perimeter, set_color
+import math
+
 
 MULTIPLE_STD_PARAM = 2.0
 FILE_SUFIX = ""
@@ -30,6 +29,7 @@ MASK_DILATATION = np.array([[0, 1, 0],
                             [1, 1, 1],
                             [0, 1, 0]])
 
+IDENT_PARAM = 0.52 # <-1,1>
 
 def readBitmapFromFile(fileName):
     path = "Photos/" + fileName + ".jpg"
@@ -43,17 +43,6 @@ def writeBitmapToFile(bitmap, fileName):
     path = "Done/" + fileName + FILE_SUFIX + ".jpg"
     image.save(path)
 
-
-def findElement(myImage, myElement, myCopy):
-    result = match_template(myImage, myElement)
-    y, x = np.unravel_index(np.argmax(result), result.shape)
-    height, width = myElement.shape
-    myImage[y:y + height, x:x + width] = 0
-    print(y)
-    print(x)
-    rr, cc = circle_perimeter(math.ceil(y + height / 2), math.ceil(x + width / 2), min(height, width))
-    myCopy[rr, cc] = 1
-    return myImage, myCopy
 
 
 def filterImage(image):
@@ -73,6 +62,7 @@ def filterImage(image):
     for i in range(len(imageParts)):
         img = im.fromarray(np.uint8(imageParts[i]) * 255)
         img.save(str(i) + ".jpg")
+    return image
 
 
 def makeBlobs(image):
@@ -158,26 +148,19 @@ def calculateRegressionFromMachineLearning(xPositions, yPositions):
     return aParameter, bParameter
 
 
-def main():
-    '''fileName = ["GGC0", "GGC3", "GGO3", "GPN3", "GPN6", "GPO0", "JBO0", "JBO3", "JGC0", "JGC3", "JPC6",
-    "JPN3", "JPO3", "NBO0", "NBO6", "NGC3", "NPN0", "PBO0", "PGC0", "PGO3", "PPC3", "PPO3"]
-
-    for i in fileName:
-        makeImage(i)'''
-
-    # fileName = "JGC0"
-    # makeImage(fileName)
-    # fig = plt.figure(figsize=(15, 10))
-    myImage = io.imread("Photos/JGC3.jpg", as_grey=True)
-    myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
-
-    filterImage(myImage)
-
-    # myImage = skimage.filters.median(myImage)
-    # myImage = skimage.filters.sobel(myImage)
-
-
-    # myCopy = skimage.filters.laplace(myCopy)
+def findElement(myImage, myElement, myCopy, ax, myColor):
+    result = match_template(myImage, myElement)
+    tab = peak_local_max(result, 20, threshold_rel=IDENT_PARAM)
+    for el in tab:
+        y = el[0]
+        x = el[1]
+        height, width = myElement.shape
+        myImage[y:y+height, x:x+width] = 0
+        #print (y)
+        #print (x)
+        rect = plt.Rectangle((x,y), width, height, edgecolor=myColor, fill=False)
+        ax.add_patch(rect)
+    return myImage, myCopy
 
 
     # io.imshow(myImage)
@@ -188,6 +171,38 @@ def main():
     #     myImage, myCopy = findElement(myImage, myElement, myCopy)
     # io.imshow(myCopy)
     # plt.show()
+
+def findSth(elements):
+    for i in elements:
+        mean = round(np.mean(i),3)
+        std = round(np.std(i),3)
+        var = round(np.var(i),3)
+        print(mean, std,var)
+
+def loadElements(myNames):
+    elements = []
+    for i in myNames:
+        elements.append(io.imread("Patterns/" + i +".jpg", as_grey=True))
+    return elements
+
+def main():
+    myNames = ['chord3', 'chord2','trebleClef', 'bassClef', 'eighthNote', 'quarterNote', 'wholeNote']
+    frameColor = ['yellow','coral','b', 'r', 'm', 'c', 'g']
+
+    fileName = "GGC0"
+    fig = plt.figure(figsize=(15, 10))
+    ax = fig.add_subplot(111)
+    elements = loadElements(myNames)
+    #line = io.imread("Patterns/line.jpg", as_grey=True)
+    #findSth(elements)
+    myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
+    myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
+    myImage = filterImage(myImage)
+    
+    for i in range(len(elements)):
+        myImage, myCopy = findElement(myImage, elements[i], myCopy, ax, frameColor[i])
+    io.imshow(myCopy)
+    plt.show()
 
 
 if __name__ == '__main__':

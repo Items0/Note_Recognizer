@@ -1,0 +1,23 @@
+oznacznie   Oświetlenie :
+J               -jasne
+G               -gradientowe
+P               -prześwietlone
+N               -niedoświetlone
+
+            Kartka
+G               -gładka
+P               -pognieciona
+B               -brudna
+
+            Pisak
+C               -czarny
+N               -niebieski
+O               -ołówek
+
+            Kąt zdjęcia
+0               -0 stopni
+3               -do 30 stopni
+6               -do 60 stopni
+
+
+Nazwa pliku to czwórka kryteriów [oświetlenie,kartka,pisak,kąt].jpg             
