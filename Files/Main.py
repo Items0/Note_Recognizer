@@ -52,15 +52,53 @@ def filterImage(image):
     image = image > skimage.filters.threshold_li(image)
     image = morph.erosion(image)
     image = morph.dilation(image)
+
     image, blob = toHorizontalLevel(image)
     im.fromarray(np.uint8(image * 255)).show()
     im.fromarray(np.uint8(blob * 255)).show()
+
+    image2 = np.asarray(im.fromarray(np.uint8(image)))
+
+    image = fillEmptySpaceInImage(image2)
+    im.fromarray(np.uint8(image * 255)).show()
 
     starts, stops = detectStartsAndEndsBlobs(blob)
     imageParts = divideImageOnParts(image, starts, stops)
     for i in range(len(imageParts)):
         img = im.fromarray(np.uint8(imageParts[i]) * 255)
         img.save(str(i) + ".jpg")
+    return image
+
+
+def fillEmptySpaceInImage(image):
+    print("Wypełniam puste przestrzenie konturów")
+    limit = 20
+    image.setflags(write=1)
+    for y in range(len(image)):
+        start = 0
+        changes = 0
+        lenght = 0
+        for x in range(len(image[0])):
+            if x + 1 < len(image[0]) and image[y, x] == 1 and image[y, x + 1] == 0:
+                changes += 1
+                if changes == 1:
+                    start = x
+                    lenght = 0
+            if changes == 1 and lenght != 0 and x + 1 < len(image[0]) and image[y, x] == 0 and image[y, x + 1] == 1:
+                changes += 1
+                if changes == 2:
+                    for i in range(x - start):
+                        image[y, x - i] = 1
+                    start = 0
+                    lenght = 0
+                    changes = 0
+            if changes != 0:
+                lenght += 1
+                if lenght > limit:
+                    lenght = 0
+                    changes = 0
+                    start = 0
+            lenght += 1
     return image
 
 
@@ -87,6 +125,7 @@ def toHorizontalLevel(image):
         if np.abs(angle) < 10:
             break
     return image, blob
+
 
 def makeBlobs(image):
     print("Robię blob'y")
@@ -141,22 +180,21 @@ def detectOneStaff(blob, zerosMatrix, limit):
     for y in range(len(blob)):
         for x in range(len(blob[0])):
             if (blob[y, x] == 1 and zerosMatrix[y, x] == 0):
-                counter = markOneShape(blob,zerosMatrix, x, y, 0)
+                counter = markOneShape(blob, zerosMatrix, x, y, 0)
                 if (counter > limit):
                     return
-
 
 
 def markOneShape(blob, zerosMatrix, x, y, counter):
     zerosMatrix[y, x] = 1
     if y + 1 < len(blob) and blob[y + 1, x] == 1 and zerosMatrix[y + 1, x] == 0:
-        counter = markOneShape(blob, zerosMatrix, x, y + 1, counter+1)
+        counter = markOneShape(blob, zerosMatrix, x, y + 1, counter + 1)
     if y - 1 >= 0 and blob[y - 1, x] == 1 and zerosMatrix[y - 1, x] == 0:
-        counter = markOneShape(blob, zerosMatrix, x, y - 1, counter+1)
+        counter = markOneShape(blob, zerosMatrix, x, y - 1, counter + 1)
     if x + 1 < len(blob[0]) and blob[y, x + 1] == 1 and zerosMatrix[y, x + 1] == 0:
-        counter = markOneShape(blob, zerosMatrix, x + 1, y, counter+1)
+        counter = markOneShape(blob, zerosMatrix, x + 1, y, counter + 1)
     if x - 1 >= 0 and blob[y, x - 1] == 1 and zerosMatrix[y, x - 1] == 0:
-        counter = markOneShape(blob, zerosMatrix, x - 1, y, counter+1)
+        counter = markOneShape(blob, zerosMatrix, x - 1, y, counter + 1)
     return counter
 
 
@@ -244,9 +282,11 @@ def main():
     elements = loadElements(myNames)
     # line = io.imread("Patterns/line.jpg", as_grey=True)
     # findSth(elements)
-    myImage = io.imread("Photos/JGC3.jpg", as_grey=True)
+    myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
     myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
     myImage = filterImage(myImage)
+
+    # todo trzeba rotować myCopy tak samo jak myImage
 
     for i in range(len(elements)):
         myImage, myCopy = findElement(myImage, elements[i], myCopy, ax, frameColor[i])
