@@ -107,7 +107,7 @@ def toHorizontalLevel(image):
     while True:
         blob = makeBlobs(image)
 
-        image2 = np.asarray(im.fromarray(np.uint8(blob)).resize((int(len(blob) / 20), (int(len(blob[0]) / 20)))))
+        image2 = np.asarray(im.fromarray(np.uint8(blob)).resize((int(len(blob) / 30), (int(len(blob[0]) / 30)))))
         print((len(image2) * len(image2[0])), " ", (len(image2) * len(image2[0]) / 100))
         zerosMatrix = np.zeros((len(image2), len(image2[0])))
         limit = len(image2) * len(image2[0]) / 100
@@ -120,8 +120,8 @@ def toHorizontalLevel(image):
         angle = np.arctan(aParameter) * 188 / np.pi
         print("angle ", angle)
 
-        image = np.asarray(im.fromarray(np.uint8(image)).rotate(angle))
-        blob = np.asarray(im.fromarray(np.uint8(blob)).rotate(angle))
+        image = np.asarray(im.fromarray(np.uint8(image)).rotate(angle, expand=True))
+        blob = np.asarray(im.fromarray(np.uint8(blob)).rotate(angle, expand=True))
         if np.abs(angle) < 10:
             break
     return image, blob
@@ -187,14 +187,14 @@ def detectOneStaff(blob, zerosMatrix, limit):
 
 def markOneShape(blob, zerosMatrix, x, y, counter):
     zerosMatrix[y, x] = 1
-    if y + 1 < len(blob) and blob[y + 1, x] == 1 and zerosMatrix[y + 1, x] == 0:
-        counter = markOneShape(blob, zerosMatrix, x, y + 1, counter + 1)
     if y - 1 >= 0 and blob[y - 1, x] == 1 and zerosMatrix[y - 1, x] == 0:
         counter = markOneShape(blob, zerosMatrix, x, y - 1, counter + 1)
-    if x + 1 < len(blob[0]) and blob[y, x + 1] == 1 and zerosMatrix[y, x + 1] == 0:
-        counter = markOneShape(blob, zerosMatrix, x + 1, y, counter + 1)
+    if y + 1 < len(blob) and blob[y + 1, x] == 1 and zerosMatrix[y + 1, x] == 0:
+        counter = markOneShape(blob, zerosMatrix, x, y + 1, counter + 1)
     if x - 1 >= 0 and blob[y, x - 1] == 1 and zerosMatrix[y, x - 1] == 0:
         counter = markOneShape(blob, zerosMatrix, x - 1, y, counter + 1)
+    if x + 1 < len(blob[0]) and blob[y, x + 1] == 1 and zerosMatrix[y, x + 1] == 0:
+        counter = markOneShape(blob, zerosMatrix, x + 1, y, counter + 1)
     return counter
 
 
@@ -282,7 +282,7 @@ def main():
     elements = loadElements(myNames)
     # line = io.imread("Patterns/line.jpg", as_grey=True)
     # findSth(elements)
-    myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
+    myImage = io.imread("Photos/JGC3.jpg", as_grey=True)
     myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
     myImage = filterImage(myImage)
 
