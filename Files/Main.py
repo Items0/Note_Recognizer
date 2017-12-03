@@ -62,12 +62,52 @@ def filterImage(image):
     image = fillEmptySpaceInImage(image2)
     im.fromarray(np.uint8(image * 255)).show()
 
+    cutNotesFromImage(image)
+
     starts, stops = detectStartsAndEndsBlobs(blob)
     imageParts = divideImageOnParts(image, starts, stops)
     for i in range(len(imageParts)):
         img = im.fromarray(np.uint8(imageParts[i]) * 255)
         img.save(str(i) + ".jpg")
     return image
+
+
+def cutNotesFromImage(image):
+    print("Wycinam nutki z obrazka")
+    verticalEdge = skimage.filters.sobel_v(image)
+    zerosMatrix = np.zeros((len(verticalEdge), len(verticalEdge[0])))
+    right = 50
+    left = 50
+    down = 170
+    for y in range(len(verticalEdge)):
+        for x in range(len(verticalEdge[0])):
+            if zerosMatrix[y, x] == 0 and verticalEdge[y, x] != 0 and y + down < len(verticalEdge) \
+                    and x - left >= 0 and x + right < len(verticalEdge[0]) \
+                    and isNotMarkArea(zerosMatrix, x, y, left, right, down):
+                print(str(x), " ", str(y))
+                note = np.zeros((down, left+right))
+                for j in range(down):
+                    for i in range(left):
+                        zerosMatrix[y + j, x - i] = 1
+                        note[j,left-i] = image[y+j,x-i]
+                    for k in range(right):
+                        zerosMatrix[y + j, x + k] = 1
+                        note[j,left+k] = image[y+j,x+k]
+                #ZAPIS NUTEK DO PLIKU TODO lista nutek
+                img = im.fromarray(np.uint8(note*255))
+                img.save(str(y) + ".jpg")
+    return zerosMatrix
+
+
+def isNotMarkArea(image, x, y, left, right, down):
+    for i in range(down):
+        for j in range(left):
+            if image[y + i, x - j] == 1:
+                return False
+        for k in range(right):
+            if image[y + i, x + j] == 1:
+                return False
+    return True
 
 
 def fillEmptySpaceInImage(image):
@@ -282,7 +322,7 @@ def main():
     elements = loadElements(myNames)
     # line = io.imread("Patterns/line.jpg", as_grey=True)
     # findSth(elements)
-    myImage = io.imread("Photos/JGC3.jpg", as_grey=True)
+    myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
     myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
     myImage = filterImage(myImage)
 
