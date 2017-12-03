@@ -10,6 +10,9 @@ from skimage.feature import match_template, peak_local_max
 from skimage import io, data, draw, measure
 from skimage.draw import circle_perimeter, set_color
 import math
+from skimage.measure import (moments, moments_central, moments_normalized,
+                             moments_hu)
+import pandas as pd
 
 MULTIPLE_STD_PARAM = 2.0
 FILE_SUFIX = ""
@@ -85,16 +88,16 @@ def cutNotesFromImage(image):
                     and x - left >= 0 and x + right < len(verticalEdge[0]) \
                     and isNotMarkArea(zerosMatrix, x, y, left, right, down):
                 print(str(x), " ", str(y))
-                note = np.zeros((down, left+right))
+                note = np.zeros((down, left + right))
                 for j in range(down):
                     for i in range(left):
                         zerosMatrix[y + j, x - i] = 1
-                        note[j,left-i] = image[y+j,x-i]
+                        note[j, left - i] = image[y + j, x - i]
                     for k in range(right):
                         zerosMatrix[y + j, x + k] = 1
-                        note[j,left+k] = image[y+j,x+k]
-                #ZAPIS NUTEK DO PLIKU TODO lista nutek
-                img = im.fromarray(np.uint8(note*255))
+                        note[j, left + k] = image[y + j, x + k]
+                # ZAPIS NUTEK DO PLIKU TODO lista nutek
+                img = im.fromarray(np.uint8(note * 255))
                 img.save(str(y) + ".jpg")
     return zerosMatrix
 
@@ -312,26 +315,66 @@ def loadElements(myNames):
     return elements
 
 
+def readPatternsFromFile(filenames):
+    patterns = []
+    for name in filenames:
+        path = "Notes/" + name
+        patterns.append(io.imread(path,as_grey=True))
+    return patterns
+
+
+def getMomentsHu(image):
+    m = moments(image)
+    cr = m[0, 1] / m[0, 0]
+    cc = m[1, 0] / m[0, 0]
+    #print("{0:.2f} {0:.2f}".format(cr, cc))
+    mu = moments_central(image, cr, cc)
+    mn = moments_normalized(mu)
+    hu = moments_hu(mn)
+    #print(mu)
+    l = [norm(f) for f in hu]
+    return l
+
+table = []
+norm = lambda x: -np.sign(x)*np.log10(np.abs(x))
+
+
 def main():
     myNames = ['chord3', 'chord2', 'trebleClef', 'bassClef', 'eighthNote', 'quarterNote', 'wholeNote']
     frameColor = ['yellow', 'coral', 'b', 'r', 'm', 'c', 'g']
 
-    fileName = "GGC0"
-    fig = plt.figure(figsize=(15, 10))
-    ax = fig.add_subplot(111)
-    elements = loadElements(myNames)
-    # line = io.imread("Patterns/line.jpg", as_grey=True)
-    # findSth(elements)
-    myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
-    myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
-    myImage = filterImage(myImage)
+    paternImageNames = ['15chord1.jpg', '25chord1.jpg', 'a2.jpg', 'a4.jpg', 'b2.jpg', 'b4.jpg', 'Bass.jpg', 'C2.jpg',
+                        'C4.jpg', 'D1.jpg', 'D2.jpg', 'D4.jpg', 'D8.jpg', 'E1.jpg', 'e1.jpg', 'E8.jpg', 'F1.jpg',
+                        'f8.jpg', 'g2.jpg', 'G4.jpg', 'G8.jpg', 'Violin.jpg']
+    paternImages = readPatternsFromFile(paternImageNames)
+    for image in paternImages:
+        l = getMomentsHu(image)
+        table.append(l)
 
-    # todo trzeba rotować myCopy tak samo jak myImage
+    pd.options.display.float_format = '{:,.2f}'.format
+    df = pd.DataFrame(table,
+                      index=['15chord1.jpg', '25chord1.jpg', 'a2.jpg', 'a4.jpg', 'b2.jpg', 'b4.jpg', 'Bass.jpg', 'C2.jpg',
+                        'C4.jpg', 'D1.jpg', 'D2.jpg', 'D4.jpg', 'D8.jpg', 'E1.jpg', 'e1.jpg', 'E8.jpg', 'F1.jpg',
+                        'f8.jpg', 'g2.jpg', 'G4.jpg', 'G8.jpg', 'Violin.jpg'],
+                      columns=['M0', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6'])
+    print(df)
 
-    for i in range(len(elements)):
-        myImage, myCopy = findElement(myImage, elements[i], myCopy, ax, frameColor[i])
-    io.imshow(myCopy)
-    plt.show()
+    # fileName = "GGC0"
+    # fig = plt.figure(figsize=(15, 10))
+    # ax = fig.add_subplot(111)
+    # elements = loadElements(myNames)
+    # # line = io.imread("Patterns/line.jpg", as_grey=True)
+    # # findSth(elements)
+    # myImage = io.imread("Photos/JGC0.jpg", as_grey=True)
+    # myCopy = io.imread("Photos/JGC0.jpg", as_grey=True)
+    # myImage = filterImage(myImage)
+    #
+    # # todo trzeba rotować myCopy tak samo jak myImage
+    #
+    # for i in range(len(elements)):
+    #     myImage, myCopy = findElement(myImage, elements[i], myCopy, ax, frameColor[i])
+    # io.imshow(myCopy)
+    # plt.show()
 
 
 if __name__ == '__main__':
