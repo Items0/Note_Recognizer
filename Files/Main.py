@@ -48,31 +48,31 @@ def writeBitmapToFile(bitmap, fileName):
     image.save(path)
 
 
-def filterImage(image):
+def filterImage(copy, original):
     print("Obrabiam obrazek")
-    image = np.abs(convolve(image, MASK_MEAN))
-    image = skimage.filters.sobel(image)
-    image = image > skimage.filters.threshold_li(image)
-    image = morph.erosion(image)
-    image = morph.dilation(image)
+    copy = np.abs(convolve(copy, MASK_MEAN))
+    copy = skimage.filters.sobel(copy)
+    copy = copy > skimage.filters.threshold_li(copy)
+    copy = morph.erosion(copy)
+    copy = morph.dilation(copy)
 
-    image, blob = toHorizontalLevel(image)
-    im.fromarray(np.uint8(image * 255)).show()
+    copy, blob, original = toHorizontalLevel(copy, original)
+    im.fromarray(np.uint8(copy * 255)).show()
     im.fromarray(np.uint8(blob * 255)).show()
 
-    image2 = np.asarray(im.fromarray(np.uint8(image)))
+    image2 = np.asarray(im.fromarray(np.uint8(copy)))
 
-    image = fillEmptySpaceInImage(image2)
-    im.fromarray(np.uint8(image * 255)).show()
-
-    cutNotesFromImage(image)
+    copy = fillEmptySpaceInImage(image2)
+    im.fromarray(np.uint8(copy * 255)).show()
 
     starts, stops = detectStartsAndEndsBlobs(blob)
-    imageParts = divideImageOnParts(image, starts, stops)
-    for i in range(len(imageParts)):
-        img = im.fromarray(np.uint8(imageParts[i]) * 255)
+    copyParts, originalParts = divideImageOnParts(copy, original, starts, stops)
+    for i in range(len(copyParts)):
+        img = im.fromarray(np.uint8(copyParts[i]) * 255)
         img.save(str(i) + ".jpg")
-    return image
+        img = im.fromarray(np.uint8(originalParts[i]) * 255)
+        img.save(str(i) + "o.jpg")
+    return copyParts, originalParts
 
 
 def cutNotesFromImage(image):
@@ -145,7 +145,7 @@ def fillEmptySpaceInImage(image):
     return image
 
 
-def toHorizontalLevel(image):
+def toHorizontalLevel(image, original):
     print("Poziomuję obrazek")
     while True:
         blob = makeBlobs(image)
@@ -165,9 +165,10 @@ def toHorizontalLevel(image):
 
         image = np.asarray(im.fromarray(np.uint8(image)).rotate(angle, expand=True))
         blob = np.asarray(im.fromarray(np.uint8(blob)).rotate(angle, expand=True))
+        original = np.asarray(im.fromarray(np.uint8(original)).rotate(angle, expand=True))
         if np.abs(angle) < 10:
             break
-    return image, blob
+    return image, blob, original
 
 
 def makeBlobs(image):
@@ -201,21 +202,26 @@ def detectStartsAndEndsBlobs(image):
     return starts, ends
 
 
-def divideImageOnParts(image, starts, stops):
+def divideImageOnParts(copy, original, starts, stops):
     print("Dzielę obrazek na części")
-    parts = []
-    part = []
+    copyParts = []
+    copyPart = []
+    originalParts = []
+    originalPart = []
     rewrite = False
-    for i in range(len(image)):
+    for i in range(len(copy)):
         if not rewrite and i in starts:
             rewrite = True
-            part = []
+            copyPart = []
+            originalPart = []
         if rewrite and i in stops:
             rewrite = False
-            parts.append(part)
+            copyParts.append(copyPart)
+            originalParts.append(originalPart)
         if rewrite:
-            part.append(image[i] * 1)
-    return parts
+            copyPart.append(copy[i] * 1)
+            originalPart.append(original[i] * 1)
+    return copyParts, originalParts
 
 
 def detectOneStaff(blob, zerosMatrix, limit):
@@ -354,10 +360,11 @@ def main():
     copyImage = io.imread("Photos/JGC0.jpg", as_grey=True)
     originalImage = io.imread("Photos/JGC0.jpg", as_grey=True)
 
-    filteredImage = filterImage(copyImage)
+    copyParts, originalParts = filterImage(copyImage, originalImage)
+    print(len(copyParts))
+    print(len(originalParts))
 
-
-    # fig = plt.figure(figsize=(15, 10))
+    # fig = plt.figure(figsize=(15, 10))4
     # ax = fig.add_subplot(111)
     # elements = loadElements(myNames)
     # # line = io.imread("Patterns/line.jpg", as_grey=True)
