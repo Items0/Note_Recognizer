@@ -1,20 +1,15 @@
-import numpy as np
-from PIL import Image as im
-import PIL.ImageStat as imageStat  # fajna clasa analizująca  imageStat.Stat(Image)._get[co chcę (mean, stddev ...)]
 import matplotlib.pyplot as plt
+import numpy as np
 import skimage
-from skimage.filters.edges import convolve
 import skimage.morphology as morph
-from skimage.morphology import square
+from PIL import Image as im
+from PIL import ImageDraw
+from skimage import io
 from skimage.feature import match_template, peak_local_max
-from skimage import io, data, draw, measure
-from skimage.draw import circle_perimeter, set_color
-import math
+from skimage.filters.edges import convolve
 from skimage.measure import (moments, moments_central, moments_normalized,
                              moments_hu)
-import pandas as pd
-from PIL import ImageDraw
-from PIL import ImageFont
+from skimage.morphology import square
 
 MULTIPLE_STD_PARAM = 2.0
 FILE_SUFIX = ""
@@ -39,6 +34,7 @@ IDENT_PARAM = 0.52  # <-1,1>
 RIGHT = 50
 LEFT = 50
 DOWN = 170
+
 
 def readBitmapFromFile(fileName):
     path = "Photos/" + fileName + ".jpg"
@@ -420,12 +416,12 @@ def drawRectangleAroundNote(image, position, noteName):
     DOWN = 170
     image = np.asarray(image)
     image.setflags(write=1)
-    for i in range(RIGHT+LEFT):
-        image[position[1]][position[0]+RIGHT-i] = 1
+    for i in range(RIGHT + LEFT):
+        image[position[1]][position[0] + RIGHT - i] = 1
     for i in range(DOWN):
-        image[position[1]+i][position[0]+RIGHT] = 1
-    for i in range(RIGHT+LEFT):
-        image[position[1]+DOWN][position[0]+RIGHT-i] = 1
+        image[position[1] + i][position[0] + RIGHT] = 1
+    for i in range(RIGHT + LEFT):
+        image[position[1] + DOWN][position[0] + RIGHT - i] = 1
     for i in range(DOWN):
         image[position[1] + i][position[0] - LEFT] = 1
 
@@ -435,7 +431,7 @@ def drawRectangleAroundNote(image, position, noteName):
     draw = ImageDraw.Draw(img)
     # font = ImageFont.truetype(<font-file>, <font-size>)
     # draw.text((x, y),"Sample Text",(r,g,b))
-    draw.text((position[0], position[1]+20), noteName, (255, 255, 255))
+    draw.text((position[0], position[1] + 20), noteName, (255, 255, 255))
     image = np.asarray(img)
 
     return image
@@ -451,8 +447,8 @@ def main():
     patternHu = preparePatternsMomentHu(paternImageNames)
 
     fileName = "JGC0"
-    copyImage = io.imread("Photos/"+fileName+".jpg", as_grey=True)
-    originalImage = io.imread("Photos/"+fileName+".jpg", as_grey=True)
+    copyImage = io.imread("Photos/" + fileName + ".jpg", as_grey=True)
+    originalImage = io.imread("Photos/" + fileName + ".jpg", as_grey=True)
 
     copyParts, originalParts = filterImage(copyImage, originalImage)
 
@@ -463,13 +459,13 @@ def main():
             huDetect = getMomentsHu(detectNotes[j])
             note = compareHuMomentWithPatterns(huDetect, patternHu, paternImageNames)
             if note != "NULL":
-                originalParts[i] = drawRectangleAroundNote(originalParts[i],positions[j],note)
+                originalParts[i] = drawRectangleAroundNote(originalParts[i], positions[j], note)
 
     for i in range(len(copyParts)):
         ori = np.float_(originalParts[i]) * 255
         ori = np.uint8(ori)
         img = im.fromarray(ori)
-        img.save(str(i) + "-"+fileName+".jpg")
+        img.save(str(i) + "-" + fileName + ".jpg")
 
     # fig = plt.figure(figsize=(15, 10))4
     # ax = fig.add_subplot(111)
