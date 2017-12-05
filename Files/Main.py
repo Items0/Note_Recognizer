@@ -50,6 +50,7 @@ def writeBitmapToFile(bitmap, fileName):
 
 def filterImage(copy, original):
     print("Obrabiam obrazek")
+    im.fromarray(np.uint8(original * 255)).show()
     copy = np.abs(convolve(copy, MASK_MEAN))
     copy = skimage.filters.sobel(copy)
     copy = copy > skimage.filters.threshold_li(copy)
@@ -59,6 +60,7 @@ def filterImage(copy, original):
     copy, blob, original = toHorizontalLevel(copy, original)
     im.fromarray(np.uint8(copy * 255)).show()
     im.fromarray(np.uint8(blob * 255)).show()
+    im.fromarray(np.uint8(original * 255)).show()
 
     image2 = np.asarray(im.fromarray(np.uint8(copy)))
 
@@ -165,7 +167,8 @@ def toHorizontalLevel(image, original):
 
         image = np.asarray(im.fromarray(np.uint8(image)).rotate(angle, expand=True))
         blob = np.asarray(im.fromarray(np.uint8(blob)).rotate(angle, expand=True))
-        original = np.asarray(im.fromarray(np.uint8(original)).rotate(angle, expand=True))
+        original = np.asarray(im.fromarray(np.float_(original)).rotate(angle, expand=True))
+        im.fromarray(np.uint8(original * 255)).show()
         if np.abs(angle) < 10:
             break
     return image, blob, original
