@@ -58,26 +58,19 @@ def filterImage(copy, original):
     copy = morph.dilation(copy)
 
     copy, blob, original = toHorizontalLevel(copy, original)
-    # im.fromarray(np.uint8(copy * 255)).show()
-    # im.fromarray(np.uint8(blob * 255)).show()
-    # im.fromarray(np.uint8(original * 255)).show()
-
     image2 = np.asarray(im.fromarray(np.uint8(copy)))
 
     copy = fillEmptySpaceInImage(image2)
-    #im.fromarray(np.uint8(copy * 255)).show()
 
     starts, stops = detectStartsAndEndsBlobs(blob)
     copyParts, originalParts = divideImageOnParts(copy, original, starts, stops)
-    print(type(originalParts))
-    print(type(originalParts[0]))
 
     for i in range(len(copyParts)):
         img = im.fromarray(np.uint8(copyParts[i]) * 255)
         img.save(str(i) + ".jpg")
-        image = np.float_(originalParts[i])*255
-        image = np.uint8(image)
-        img = im.fromarray(image)
+        ori = np.float_(originalParts[i])*255
+        ori = np.uint8(ori)
+        img = im.fromarray(ori)
         img.save(str(i) + "o.jpg")
     return copyParts, originalParts
 
@@ -217,6 +210,9 @@ def divideImageOnParts(copy, original, starts, stops):
     originalParts = []
     originalPart = []
     rewrite = False
+    emptyLine = []
+    for i in range(len(copy[0])):
+        emptyLine.append(0)
     for i in range(len(copy)):
         if not rewrite and i in starts:
             rewrite = True
@@ -224,6 +220,9 @@ def divideImageOnParts(copy, original, starts, stops):
             originalPart = []
         if rewrite and i in stops:
             rewrite = False
+            for i in range(200):
+                copyPart.append(emptyLine)
+                originalPart.append(emptyLine)
             copyParts.append(copyPart)
             originalParts.append(originalPart)
         if rewrite:
