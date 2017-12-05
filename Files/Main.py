@@ -34,6 +34,9 @@ MASK_DILATATION = np.array([[0, 1, 0],
 
 IDENT_PARAM = 0.52  # <-1,1>
 
+RIGHT = 50
+LEFT = 50
+DOWN = 170
 
 def readBitmapFromFile(fileName):
     path = "Photos/" + fileName + ".jpg"
@@ -72,25 +75,22 @@ def cutNotesFromImage(image):
     print("Wycinam nutki z obrazka")
     verticalEdge = skimage.filters.sobel_v(image)
     zerosMatrix = np.zeros((len(verticalEdge), len(verticalEdge[0])))
-    right = 50
-    left = 50
-    down = 170
     positions = []
     detectNotes = []
     for y in range(len(verticalEdge)):
         for x in range(len(verticalEdge[0])):
-            if zerosMatrix[y, x] == 0 and verticalEdge[y, x] != 0 and y + down < len(verticalEdge) \
-                    and x - left >= 0 and x + right < len(verticalEdge[0]) \
-                    and isNotMarkArea(zerosMatrix, x, y, left, right, down):
+            if zerosMatrix[y, x] == 0 and verticalEdge[y, x] != 0 and y + DOWN < len(verticalEdge) \
+                    and x - LEFT >= 0 and x + RIGHT < len(verticalEdge[0]) \
+                    and isNotMarkArea(zerosMatrix, x, y, LEFT, RIGHT, DOWN):
                 positions.append((x, y))
-                note = np.zeros((down, left + right))
-                for j in range(down):
-                    for i in range(left):
+                note = np.zeros((DOWN, LEFT + RIGHT))
+                for j in range(DOWN):
+                    for i in range(LEFT):
                         zerosMatrix[y + j, x - i] = 1
-                        note[j, left - i] = image[y + j][x - i]
-                    for k in range(right):
+                        note[j, LEFT - i] = image[y + j][x - i]
+                    for k in range(RIGHT):
                         zerosMatrix[y + j, x + k] = 1
-                        note[j, left + k] = image[y + j][x + k]
+                        note[j, LEFT + k] = image[y + j][x + k]
                 detectNotes.append(note)
     return detectNotes, positions
 
@@ -413,11 +413,19 @@ def compareHuMomentWithPatterns(noteHu, patterns, noteNames):
 
 
 def drawRectangleAroundNote(image, position):
-    image.setflags(write=1)
-    right = 50
-    left = 50
-    down = 170
-
+    RIGHT = 50
+    LEFT = 50
+    DOWN = 170
+    image = np.asarray(image)
+    for i in range(RIGHT+LEFT):
+        image[position[1]][position[0]+RIGHT-i] = 1
+    for i in range(DOWN):
+        image[position[1]+i][position[0]+RIGHT] = 1
+    for i in range(RIGHT+LEFT):
+        image[position[1]+DOWN][position[0]+RIGHT-i] = 1
+    for i in range(DOWN):
+        image[position[1] + i][position[0] - LEFT] = 1
+    return image
 
 
 def main():
@@ -440,6 +448,8 @@ def main():
         for j in range(len(detectNotes)):
             huDetect = getMomentsHu(detectNotes[j])
             note = compareHuMomentWithPatterns(huDetect, patternHu, paternImageNames)
+            if note != "NULL":
+                originalParts[i] = drawRectangleAroundNote(originalParts[i],positions[j])
 
     for i in range(len(copyParts)):
         img = im.fromarray(np.uint8(copyParts[i]) * 255)
