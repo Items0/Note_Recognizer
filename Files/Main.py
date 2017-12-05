@@ -50,7 +50,7 @@ def writeBitmapToFile(bitmap, fileName):
 
 def filterImage(copy, original):
     print("Obrabiam obrazek")
-    #im.fromarray(np.uint8(original * 255)).show()
+    # im.fromarray(np.uint8(original * 255)).show()
     copy = np.abs(convolve(copy, MASK_MEAN))
     copy = skimage.filters.sobel(copy)
     copy = copy > skimage.filters.threshold_li(copy)
@@ -65,13 +65,6 @@ def filterImage(copy, original):
     starts, stops = detectStartsAndEndsBlobs(blob)
     copyParts, originalParts = divideImageOnParts(copy, original, starts, stops)
 
-    for i in range(len(copyParts)):
-        img = im.fromarray(np.uint8(copyParts[i]) * 255)
-        img.save(str(i) + ".jpg")
-        ori = np.float_(originalParts[i])*255
-        ori = np.uint8(ori)
-        img = im.fromarray(ori)
-        img.save(str(i) + "o.jpg")
     return copyParts, originalParts
 
 
@@ -82,24 +75,24 @@ def cutNotesFromImage(image):
     right = 50
     left = 50
     down = 170
+    positions = []
+    detectNotes = []
     for y in range(len(verticalEdge)):
         for x in range(len(verticalEdge[0])):
             if zerosMatrix[y, x] == 0 and verticalEdge[y, x] != 0 and y + down < len(verticalEdge) \
                     and x - left >= 0 and x + right < len(verticalEdge[0]) \
                     and isNotMarkArea(zerosMatrix, x, y, left, right, down):
-                print(str(x), " ", str(y))
+                positions.append((x, y))
                 note = np.zeros((down, left + right))
                 for j in range(down):
                     for i in range(left):
                         zerosMatrix[y + j, x - i] = 1
-                        note[j, left - i] = image[y + j, x - i]
+                        note[j, left - i] = image[y + j][x - i]
                     for k in range(right):
                         zerosMatrix[y + j, x + k] = 1
-                        note[j, left + k] = image[y + j, x + k]
-                # ZAPIS NUTEK DO PLIKU TODO lista nutek
-                img = im.fromarray(np.uint8(note * 255))
-                img.save(str(y) + ".jpg")
-    return zerosMatrix
+                        note[j, left + k] = image[y + j][x + k]
+                detectNotes.append(note)
+    return detectNotes, positions
 
 
 def isNotMarkArea(image, x, y, left, right, down):
@@ -166,7 +159,7 @@ def toHorizontalLevel(image, original):
         image = np.asarray(im.fromarray(np.uint8(image)).rotate(angle, expand=True))
         blob = np.asarray(im.fromarray(np.uint8(blob)).rotate(angle, expand=True))
         original = np.asarray(im.fromarray(np.float_(original)).rotate(angle, expand=True))
-        #im.fromarray(np.uint8(original * 255)).show()
+        # im.fromarray(np.uint8(original * 255)).show()
         if np.abs(angle) < 10:
             break
     return image, blob, original
@@ -227,7 +220,6 @@ def divideImageOnParts(copy, original, starts, stops):
             originalParts.append(originalPart)
         if rewrite:
             copyPart.append(copy[i] * 1)
-            print(original[i])
             originalPart.append(original[i])
     return copyParts, originalParts
 
@@ -363,6 +355,9 @@ def preparePatternsMomentHu():
     return patternsMomentHu
 
 
+
+
+
 def main():
     myNames = ['chord3', 'chord2', 'trebleClef', 'bassClef', 'eighthNote', 'quarterNote', 'wholeNote']
     frameColor = ['yellow', 'coral', 'b', 'r', 'm', 'c', 'g']
@@ -372,17 +367,31 @@ def main():
     originalImage = io.imread("Photos/JGC0.jpg", as_grey=True)
 
     copyParts, originalParts = filterImage(copyImage, originalImage)
-    print(len(copyParts))
-    print(len(originalParts))
+
+
+    for i in range(len(copyParts)):
+        detectNotes, positions = cutNotesFromImage(copyParts[i])
+        isNotes = np.zeros(len(detectNotes))
+        print(isNotes)
+
+
+
+    for i in range(len(copyParts)):
+        img = im.fromarray(np.uint8(copyParts[i]) * 255)
+        img.save(str(i) + ".jpg")
+        ori = np.float_(originalParts[i]) * 255
+        ori = np.uint8(ori)
+        img = im.fromarray(ori)
+        img.save(str(i) + "o.jpg")
+
+
 
     # fig = plt.figure(figsize=(15, 10))4
     # ax = fig.add_subplot(111)
     # elements = loadElements(myNames)
     # # line = io.imread("Patterns/line.jpg", as_grey=True)
     # # findSth(elements)
-    # myImage = filterImage(myImage)
-    #
-    # # todo trzeba rotować myCopy tak samo jak myImage
+    # myImage = filterImage(myImage
     #
     # for i in range(len(elements)):
     #     myImage, myCopy = findElement(myImage, elements[i], myCopy, ax, frameColor[i])
