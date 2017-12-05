@@ -50,7 +50,7 @@ def writeBitmapToFile(bitmap, fileName):
 
 def filterImage(copy, original):
     print("Obrabiam obrazek")
-    im.fromarray(np.uint8(original * 255)).show()
+    #im.fromarray(np.uint8(original * 255)).show()
     copy = np.abs(convolve(copy, MASK_MEAN))
     copy = skimage.filters.sobel(copy)
     copy = copy > skimage.filters.threshold_li(copy)
@@ -58,21 +58,26 @@ def filterImage(copy, original):
     copy = morph.dilation(copy)
 
     copy, blob, original = toHorizontalLevel(copy, original)
-    im.fromarray(np.uint8(copy * 255)).show()
-    im.fromarray(np.uint8(blob * 255)).show()
-    im.fromarray(np.uint8(original * 255)).show()
+    # im.fromarray(np.uint8(copy * 255)).show()
+    # im.fromarray(np.uint8(blob * 255)).show()
+    # im.fromarray(np.uint8(original * 255)).show()
 
     image2 = np.asarray(im.fromarray(np.uint8(copy)))
 
     copy = fillEmptySpaceInImage(image2)
-    im.fromarray(np.uint8(copy * 255)).show()
+    #im.fromarray(np.uint8(copy * 255)).show()
 
     starts, stops = detectStartsAndEndsBlobs(blob)
     copyParts, originalParts = divideImageOnParts(copy, original, starts, stops)
+    print(type(originalParts))
+    print(type(originalParts[0]))
+
     for i in range(len(copyParts)):
         img = im.fromarray(np.uint8(copyParts[i]) * 255)
         img.save(str(i) + ".jpg")
-        img = im.fromarray(np.uint8(originalParts[i]) * 255)
+        image = np.float_(originalParts[i])*255
+        image = np.uint8(image)
+        img = im.fromarray(image)
         img.save(str(i) + "o.jpg")
     return copyParts, originalParts
 
@@ -168,7 +173,7 @@ def toHorizontalLevel(image, original):
         image = np.asarray(im.fromarray(np.uint8(image)).rotate(angle, expand=True))
         blob = np.asarray(im.fromarray(np.uint8(blob)).rotate(angle, expand=True))
         original = np.asarray(im.fromarray(np.float_(original)).rotate(angle, expand=True))
-        im.fromarray(np.uint8(original * 255)).show()
+        #im.fromarray(np.uint8(original * 255)).show()
         if np.abs(angle) < 10:
             break
     return image, blob, original
@@ -223,7 +228,8 @@ def divideImageOnParts(copy, original, starts, stops):
             originalParts.append(originalPart)
         if rewrite:
             copyPart.append(copy[i] * 1)
-            originalPart.append(original[i] * 1)
+            print(original[i])
+            originalPart.append(original[i])
     return copyParts, originalParts
 
 
@@ -328,7 +334,7 @@ def readPatternsFromFile(filenames):
     patterns = []
     for name in filenames:
         path = "Notes/" + name
-        patterns.append(io.imread(path,as_grey=True))
+        patterns.append(io.imread(path, as_grey=True))
     return patterns
 
 
@@ -342,8 +348,10 @@ def getMomentsHu(image):
     l = [norm(f) for f in hu]
     return l
 
+
 table = []
-norm = lambda x: -np.sign(x)*np.log10(np.abs(x))
+norm = lambda x: -np.sign(x) * np.log10(np.abs(x))
+
 
 def preparePatternsMomentHu():
     paternImageNames = ['15chord1.jpg', '25chord1.jpg', 'a2.jpg', 'a4.jpg', 'b2.jpg', 'b4.jpg', 'Bass.jpg', 'C2.jpg',
@@ -354,6 +362,7 @@ def preparePatternsMomentHu():
     for image in paternImages:
         patternsMomentHu.append(getMomentsHu(image))
     return patternsMomentHu
+
 
 def main():
     myNames = ['chord3', 'chord2', 'trebleClef', 'bassClef', 'eighthNote', 'quarterNote', 'wholeNote']
