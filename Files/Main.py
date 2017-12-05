@@ -13,6 +13,8 @@ import math
 from skimage.measure import (moments, moments_central, moments_normalized,
                              moments_hu)
 import pandas as pd
+from PIL import ImageDraw
+from PIL import ImageFont
 
 MULTIPLE_STD_PARAM = 2.0
 FILE_SUFIX = ""
@@ -323,7 +325,7 @@ def loadElements(myNames):
 def readPatternsFromFile(filenames):
     patterns = []
     for name in filenames:
-        path = "Notes/" + name
+        path = "Notes/" + name + ".jpg"
         patterns.append(io.imread(path, as_grey=True))
     return patterns
 
@@ -353,7 +355,7 @@ def preparePatternsMomentHu(paternImageNames):
 
 
 def checkHuMoment(noteMoment, patternMoment):
-    thresh = 0.3
+    thresh = 0.5
     if noteMoment < patternMoment:
         result = noteMoment / patternMoment
         isGood = 1 if result >= thresh else 0
@@ -412,11 +414,12 @@ def compareHuMomentWithPatterns(noteHu, patterns, noteNames):
     return thinkItIs
 
 
-def drawRectangleAroundNote(image, position):
+def drawRectangleAroundNote(image, position, noteName):
     RIGHT = 50
     LEFT = 50
     DOWN = 170
     image = np.asarray(image)
+    image.setflags(write=1)
     for i in range(RIGHT+LEFT):
         image[position[1]][position[0]+RIGHT-i] = 1
     for i in range(DOWN):
@@ -425,6 +428,16 @@ def drawRectangleAroundNote(image, position):
         image[position[1]+DOWN][position[0]+RIGHT-i] = 1
     for i in range(DOWN):
         image[position[1] + i][position[0] - LEFT] = 1
+
+    ori = np.float_(image) * 255
+    ori = np.uint8(ori)
+    img = im.fromarray(ori)
+    draw = ImageDraw.Draw(img)
+    # font = ImageFont.truetype(<font-file>, <font-size>)
+    # draw.text((x, y),"Sample Text",(r,g,b))
+    draw.text((position[0], position[1]+20), noteName, (255, 255, 255))
+    image = np.asarray(img)
+
     return image
 
 
@@ -432,13 +445,14 @@ def main():
     myNames = ['chord3', 'chord2', 'trebleClef', 'bassClef', 'eighthNote', 'quarterNote', 'wholeNote']
     frameColor = ['yellow', 'coral', 'b', 'r', 'm', 'c', 'g']
 
-    paternImageNames = ['15chord1.jpg', '25chord1.jpg', 'a2.jpg', 'a4.jpg', 'b2.jpg', 'b4.jpg', 'Bass.jpg', 'C2.jpg',
-                        'C4.jpg', 'D1.jpg', 'D2.jpg', 'D4.jpg', 'D8.jpg', 'E1.jpg', 'e1.jpg', 'E8.jpg', 'F1.jpg',
-                        'f8.jpg', 'g2.jpg', 'G4.jpg', 'G8.jpg', 'Violin.jpg']
+    paternImageNames = ['15chord1', '25chord1', 'a2', 'a4', 'b2', 'b4', 'Bass', 'C2', 'C4', 'D1', 'D2', 'D4', 'D8',
+                        'E1', 'e1', 'E8', 'F1', 'f8', 'g2', 'G4', 'G8', 'Violin']
 
     patternHu = preparePatternsMomentHu(paternImageNames)
-    copyImage = io.imread("Photos/JGC0.jpg", as_grey=True)
-    originalImage = io.imread("Photos/JGC0.jpg", as_grey=True)
+
+    fileName = "JGC0"
+    copyImage = io.imread("Photos/"+fileName+".jpg", as_grey=True)
+    originalImage = io.imread("Photos/"+fileName+".jpg", as_grey=True)
 
     copyParts, originalParts = filterImage(copyImage, originalImage)
 
@@ -449,15 +463,13 @@ def main():
             huDetect = getMomentsHu(detectNotes[j])
             note = compareHuMomentWithPatterns(huDetect, patternHu, paternImageNames)
             if note != "NULL":
-                originalParts[i] = drawRectangleAroundNote(originalParts[i],positions[j])
+                originalParts[i] = drawRectangleAroundNote(originalParts[i],positions[j],note)
 
     for i in range(len(copyParts)):
-        img = im.fromarray(np.uint8(copyParts[i]) * 255)
-        img.save(str(i) + ".jpg")
         ori = np.float_(originalParts[i]) * 255
         ori = np.uint8(ori)
         img = im.fromarray(ori)
-        img.save(str(i) + "o.jpg")
+        img.save(str(i) + "-"+fileName+".jpg")
 
     # fig = plt.figure(figsize=(15, 10))4
     # ax = fig.add_subplot(111)
