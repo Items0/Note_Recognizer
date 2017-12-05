@@ -261,7 +261,6 @@ def prepareDataToRegression(image):
 
 def calculateRegressionFromMachineLearning(xPositions, yPositions):
     print("Liczę regresję z machine learning")
-    # todo mocno zmniejszyć dane wejściowe
     aParameter = 0.0  # inicjalizuj wagi
     bParameter = 0.0  #
     learning_rate = 0.0001  # stala uczenia
@@ -415,6 +414,9 @@ def compareHuMomentWithPatterns(noteHu, patterns, noteNames):
 
 def drawRectangleAroundNote(image, position):
     image.setflags(write=1)
+    right = 50
+    left = 50
+    down = 170
 
 
 
