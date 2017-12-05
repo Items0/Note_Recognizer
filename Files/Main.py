@@ -330,6 +330,7 @@ def readPatternsFromFile(filenames):
 
 
 def getMomentsHu(image):
+    image = np.uint8(image)
     m = moments(image)
     cr = m[0, 1] / m[0, 0]
     cc = m[1, 0] / m[0, 0]
@@ -340,14 +341,11 @@ def getMomentsHu(image):
     return l
 
 
-table = []
 norm = lambda x: -np.sign(x) * np.log10(np.abs(x))
 
 
-def preparePatternsMomentHu():
-    paternImageNames = ['15chord1.jpg', '25chord1.jpg', 'a2.jpg', 'a4.jpg', 'b2.jpg', 'b4.jpg', 'Bass.jpg', 'C2.jpg',
-                        'C4.jpg', 'D1.jpg', 'D2.jpg', 'D4.jpg', 'D8.jpg', 'E1.jpg', 'e1.jpg', 'E8.jpg', 'F1.jpg',
-                        'f8.jpg', 'g2.jpg', 'G4.jpg', 'G8.jpg', 'Violin.jpg']
+def preparePatternsMomentHu(paternImageNames):
+    print("Przygotowuję wzorce momentów Hu")
     paternImages = readPatternsFromFile(paternImageNames)
     patternsMomentHu = []  # dwuwymiarowa tablica n*7 elementów
     for image in paternImages:
@@ -355,6 +353,68 @@ def preparePatternsMomentHu():
     return patternsMomentHu
 
 
+def checkHuMoment(noteMoment, patternMoment):
+    thresh = 0.3
+    if noteMoment < patternMoment:
+        result = noteMoment / patternMoment
+        isGood = 1 if result >= thresh else 0
+        return result, isGood
+    else:
+        result = patternMoment / noteMoment
+        isGood = 1 if result >= thresh else 0
+        return result, isGood
+
+
+def compareHuMomentWithPatterns(noteHu, patterns, noteNames):
+    result = np.zeros(len(patterns))
+    goodResults = np.zeros(len(patterns))
+    maxCompatible = 0
+    for i in range(len(patterns)):
+        sum = 0
+        isGoods = 0
+        res, good = checkHuMoment(noteHu[0], patterns[i][0])
+        sum += res
+        isGoods += good
+        res, good = checkHuMoment(noteHu[1], patterns[i][1])
+        sum += res
+        isGoods += good
+        res, good = checkHuMoment(noteHu[2], patterns[i][2])
+        sum += res
+        isGoods += good
+        res, good = checkHuMoment(noteHu[3], patterns[i][3])
+        sum += res
+        isGoods += good
+        res, good = checkHuMoment(noteHu[4], patterns[i][4])
+        sum += res
+        isGoods += good
+        res, good = checkHuMoment(noteHu[5], patterns[i][5])
+        sum += res
+        isGoods += good
+        res, good = checkHuMoment(noteHu[6], patterns[i][6])
+        sum += res
+        isGoods += good
+
+        result[i] = 0 if np.isnan(sum) else abs(sum)
+        if isGoods >= 3:
+            goodResults[i] = 1
+            maxCompatible = np.maximum(maxCompatible, isGoods)
+
+    max = 0.0
+    for i in range(len(patterns)):
+        if goodResults[i] == maxCompatible:
+            max = np.maximum(max, float(result[i]))
+
+    if max != 0.0:
+        for i in range(len(patterns)):
+            if result[i] == max:
+                thinkItIs = noteNames[i]
+    else:
+        thinkItIs = "NULL"
+    return thinkItIs
+
+
+def drawRectangleAroundNote(image, position):
+    image.setflags(write=1)
 
 
 
@@ -362,19 +422,22 @@ def main():
     myNames = ['chord3', 'chord2', 'trebleClef', 'bassClef', 'eighthNote', 'quarterNote', 'wholeNote']
     frameColor = ['yellow', 'coral', 'b', 'r', 'm', 'c', 'g']
 
-    patternHu = preparePatternsMomentHu()
+    paternImageNames = ['15chord1.jpg', '25chord1.jpg', 'a2.jpg', 'a4.jpg', 'b2.jpg', 'b4.jpg', 'Bass.jpg', 'C2.jpg',
+                        'C4.jpg', 'D1.jpg', 'D2.jpg', 'D4.jpg', 'D8.jpg', 'E1.jpg', 'e1.jpg', 'E8.jpg', 'F1.jpg',
+                        'f8.jpg', 'g2.jpg', 'G4.jpg', 'G8.jpg', 'Violin.jpg']
+
+    patternHu = preparePatternsMomentHu(paternImageNames)
     copyImage = io.imread("Photos/JGC0.jpg", as_grey=True)
     originalImage = io.imread("Photos/JGC0.jpg", as_grey=True)
 
     copyParts, originalParts = filterImage(copyImage, originalImage)
 
-
     for i in range(len(copyParts)):
         detectNotes, positions = cutNotesFromImage(copyParts[i])
         isNotes = np.zeros(len(detectNotes))
-        print(isNotes)
-
-
+        for j in range(len(detectNotes)):
+            huDetect = getMomentsHu(detectNotes[j])
+            note = compareHuMomentWithPatterns(huDetect, patternHu, paternImageNames)
 
     for i in range(len(copyParts)):
         img = im.fromarray(np.uint8(copyParts[i]) * 255)
@@ -383,8 +446,6 @@ def main():
         ori = np.uint8(ori)
         img = im.fromarray(ori)
         img.save(str(i) + "o.jpg")
-
-
 
     # fig = plt.figure(figsize=(15, 10))4
     # ax = fig.add_subplot(111)
